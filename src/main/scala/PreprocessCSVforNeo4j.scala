@@ -11,7 +11,7 @@ import org.apache.spark.sql.{SQLContext, Row, DataFrame}
 
 import scala.RuntimeException
 
-object PreprocessCSV {  
+object PreprocessCSVforNeo4j {  
     def main(args: Array[String]) { 
 
     	val conf = new SparkConf().setAppName("Flights Dataset")
