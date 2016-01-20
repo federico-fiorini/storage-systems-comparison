@@ -14,43 +14,53 @@ import scala.RuntimeException
 object PreprocessCSV {  
     def main(args: Array[String]) { 
 
-        var csvFile = "dataset/2008.csv"
- 
-	    if(csvFile == null || !new File(csvFile).exists()) {
-	      throw new RuntimeException("Cannot find CSV file [" + csvFile + "]")
-	    }
-	 	 
-	    val conf = new SparkConf().setAppName("Flights Dataset")
+    	val conf = new SparkConf().setAppName("Flights Dataset")
 	    val sc = new SparkContext(conf)
 
-	    val flightData = sc.textFile(csvFile).cache()
-	    val withoutHeader: RDD[String] = dropHeader(flightData)
+        val d = new File("dataset")
+        val fileList = d.listFiles.filter(_.isFile).toList
+ 
+ 		var i = 0
+ 		for (csvFile <- fileList) {
+		    val flightData = sc.textFile(csvFile.getPath()).cache()
+		    val withoutHeader: RDD[String] = dropHeader(flightData)
+		    val splittedFlights = withoutHeader.map(row => row.split(','))
 
-	    val splittedFlights = withoutHeader.map(row => row.split(','))
-	    val mappedFlights = splittedFlights.map( row => ( Tuple5(row(16), row(17), row(0), row(1), row(2)) , 1))
-	    val reducedFlights = mappedFlights.reduceByKey(_ + _)
-	    //val backToArray = reducedFlights.map( tuple => Array(tuple._1._1, tuple._1._2, tuple._1._3, tuple._1._4, tuple._1._5, tuple._2.toString) )
+		    // Map and Reduce to calculate frequency
+		    val mappedFlights = splittedFlights.map( row => (Tuple5(row(16), row(17), row(0), row(1), row(2)) , 1))
+		    val reducedFlights = mappedFlights.reduceByKey(_ + _)
 
-	    // Generate Airports csv file. We assume that all the airports have at least one flight departing (no nodes with arrivals only)
-	    generateFile(
-	    	"airports.csv",
-	    	reducedFlights,
-	    	tuple => Array(tuple._1._1, "Airport", tuple._1._1),
-	    	// backToArray,
-	    	// columns => Array(columns(0), "Airport", columns(0)),
-	    	"id:ID(Airport),:LABEL,name",
-	    	distinct = true
-	    )
+		    // Map and Reduce to get list of all airports
+		    val mappedAirports = splittedFlights.flatMap( row => {
+		    	val a = Array(16, 17)
+		    	for (e <- a) yield (Tuple5(row(e), "", "", "", "") , 1)
+		    })
+		    val reducedAirports = mappedAirports.reduceByKey(_ + _)
 
-	    generateFile(
-	    	"routes.csv",
-	    	reducedFlights,
-	    	tuple => Array(tuple._1._1, tuple._1._2, "FLIGHT_TO", tuple._1._3, tuple._1._4, tuple._1._5, tuple._2.toString),
-	    	// backToArray,
-	    	// columns => Array(columns(0), columns(1), "FLIGHT_TO", columns(2), columns(3), columns(4), columns(5)),
-	    	":START_ID(Airport),:END_ID(Airport),:TYPE,year,month,day,frequency",
-	    	distinct = true
-	    )
+		    //val backToArray = reducedFlights.map( tuple => Array(tuple._1._1, tuple._1._2, tuple._1._3, tuple._1._4, tuple._1._5, tuple._2.toString) )
+
+		    generateFile(
+		    	"airports_" + i +".csv",
+		    	reducedAirports,
+		    	tuple => Array(tuple._1._1, "Airport", tuple._1._1),
+		    	// backToArray,
+		    	// columns => Array(columns(0), "Airport", columns(0)),
+		    	"id:ID(Airport),:LABEL,name",
+		    	distinct = true
+		    )
+
+		    generateFile(
+		    	"routes_" + i +".csv",
+		    	reducedFlights,
+		    	tuple => Array(tuple._1._1, tuple._1._2, "FLIGHT_TO", tuple._1._3, tuple._1._4, tuple._1._5, tuple._2.toString),
+		    	// backToArray,
+		    	// columns => Array(columns(0), columns(1), "FLIGHT_TO", columns(2), columns(3), columns(4), columns(5)),
+		    	":START_ID(Airport),:END_ID(Airport),:TYPE,year,month,day,frequency",
+		    	distinct = true
+		    )
+
+		    i = i + 1
+		}
     }
 
     def dropHeader(data: RDD[String]): RDD[String] = {
