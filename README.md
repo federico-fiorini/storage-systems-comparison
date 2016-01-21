@@ -10,3 +10,8 @@ Run the different script to process the import to MySQL, MongoDB and Neo4j.
 	$ ./process_mysql.sh
 	$ ./process_mongo.sh
 	$ ./process_neo4j.sh
+
+If you want to modify something you need to rebuild the jar with sbt (you need to install it first)
+	
+	sbt clean package
+

@@ -1,5 +1,8 @@
 .idea
-target
+target/resolution-cache
+target/streams
+target/scala-2.10/classes
+target/.history
 tmp
 project
 dataset
