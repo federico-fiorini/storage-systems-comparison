@@ -1,4 +1,4 @@
-name := "bigdata-project"
+name := "storage-systems-comparison"
 
 version := "1.0"
 

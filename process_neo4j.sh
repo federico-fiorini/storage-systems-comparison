@@ -2,7 +2,8 @@
 rm -rf tmp/neo
 
 # Run preprocess
-/Users/Federico/sources/spark-1.5.2/bin/spark-submit --class PreprocessCSVforNeo4j --master local[8] target/scala-2.10/bigdata-project_2.10-1.0.jar
+SPARK_SUBMIT=${SPARK_HOME%/}"/bin/spark-submit --class PreprocessCSVforNeo4j --master local[8] target/scala-2.10/bigdata-project_2.10-1.0.jar"
+$SPARK_SUBMIT
 
 # Find list of csv files and build neo4j-import command
 COMMAND=""

@@ -4,6 +4,9 @@ import org.apache.hadoop.io.IOUtils;
 
 import java.io.IOException;
 
+/**
+ * @see https://github.com/mneedham/neo4j-spark-chicago/blob/master/src/main/java/MyFileUtil.java
+ */
 public class MyFileUtil {
 
     public static boolean copyMergeWithHeader(FileSystem srcFS, Path srcDir, FileSystem dstFS, Path dstFile, boolean deleteSource, Configuration conf, String header) throws IOException {

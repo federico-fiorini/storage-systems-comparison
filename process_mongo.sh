@@ -7,8 +7,7 @@ for filename in lib/*; do
 done
 
 COMMAND=${COMMAND%?}
-
-FINAL="/Users/Federico/sources/spark-1.5.2/bin/spark-submit --driver-memory 5g --class ImportToMongo --master local[8] --jars "$COMMAND" target/scala-2.10/bigdata-project_2.10-1.0.jar"
+FINAL=${SPARK_HOME%/}"/bin/spark-submit --driver-memory 5g --class ImportToMongo --master local[8] --jars "$COMMAND" target/scala-2.10/bigdata-project_2.10-1.0.jar"
 
 # Import to new neo4j database
 $FINAL
