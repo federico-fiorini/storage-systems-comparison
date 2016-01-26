@@ -11,7 +11,9 @@ for i in *.zip; do
     cd "$i-dir"
     unzip "../$i"
     for j in *; do
-	mv "$j" "../${i%%_*}$k.${j##*.}"
+       line=$(tail -1 $j) #get last row of th csv
+       splited=(${line//,/ })
+       mv -- "$j" "../$(printf "%u_%u" ${splited[0]} ${splited[1]}).csv"
     done
     cd ..
     ((k++))
