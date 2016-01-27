@@ -13,6 +13,8 @@ import com.mongodb.hadoop.{
   BSONFileInputFormat, BSONFileOutputFormat
 }
 
+import scala.collection.Map
+
 object ImportToMongo {
   def main(args: Array[String]) { 
 
@@ -21,11 +23,17 @@ object ImportToMongo {
 
     cleanMongo()
 
-    val d = new File("dataset")
-    val fileList = d.listFiles.filter(_.isFile).toList
+    val ext = List("csv")
+    val fileList = getListOfFiles(new File("dataset"), ext)
     for (csvFile <- fileList) {
       val dataset = sc.textFile(csvFile.getPath())
       saveToMongo(dataset)
+    }
+  }
+
+  def getListOfFiles(dir: File, extensions: List[String]): List[File] = {
+    dir.listFiles.filter(_.isFile).toList.filter { file =>
+      extensions.exists(file.getName.endsWith(_))
     }
   }
 
@@ -43,10 +51,38 @@ object ImportToMongo {
     })
   }
 
+  def dropHeader(data: RDD[Array[String]]): RDD[Array[String]] = {
+    data.mapPartitionsWithIndex((idx, lines) => {
+      if (idx == 0) {
+        lines.drop(1)
+      }
+      lines
+    })
+  }
+
+  def dropCommas(line: String): String = {
+    val fcomma = "\"[^,\"]+,[^,\"]+\"".r
+    var newLine = line
+    while (fcomma.findAllIn(newLine).length != 0) {
+      newLine = newLine.replace(fcomma.findFirstIn(newLine).mkString, fcomma.findFirstIn(newLine).mkString.replaceAll(",", ""))
+    }
+    return newLine
+  }
+
   def saveToMongo(dataset: RDD[String]) {
     
-    val rows = dataset.map(r => r.split(",")).filter( l => !(l contains "Year") ) // Split values and drop the header
-    val tuples = rows.map(row => ( Tuple5(row(0), row(1), row(1), row(16), row(17)), 1 ) )
+    val rows = dataset.map(dropCommas).map(r => r.replace("\"", "")).map(r => r.split(","))
+    val header = rows.first().map(s => s.toString.toLowerCase())
+    val withoutHeader: RDD[Array[String]] = dropHeader(rows)
+
+    var index = Map[String, Int]()
+    val columns = List("year", "month", "day_of_month", "origin", "dest")
+    
+    for (columnName <- columns) {
+      index = index + (columnName -> header.indexOf(columnName))
+    }
+
+    val tuples = withoutHeader.map(row => ( Tuple5(row(index("year")), row(index("month")), row(index("day_of_month")), row(index("origin")), row(index("dest"))), 1 ) )
     val flightsCount = tuples.reduceByKey(_ + _)
     val pairs = flightsCount.map(tuple => (null, {
         val bson = new BasicBSONObject()
