@@ -29,7 +29,8 @@ object PreprocessCSVforNeo4j {
 	    val withoutHeader: RDD[Array[String]] = dropHeader(rows)
 
 	    var index = Map[String, Int]()
-	    val columns = List("year", "month", "day_of_month", "origin", "dest")
+	    val columns = List("year", "month", "day_of_month", "origin", "origin_city_name",
+	    	"origin_state_nm", "dest", "dest_city_name", "dest_state_nm")
 	    
 	    for (columnName <- columns) {
 	      index = index + (columnName -> header.indexOf(columnName))
@@ -37,33 +38,31 @@ object PreprocessCSVforNeo4j {
 
 	    // Map and Reduce to calculate frequency
 	    val mappedFlights = withoutHeader.map( row => (Tuple5(row(index("origin")), row(index("dest")), row(index("year")), row(index("month")), row(index("day_of_month"))) , 1))
-	    val reducedFlights = mappedFlights.reduceByKey(_ + _)
+	    val flightsData = mappedFlights.reduceByKey(_ + _)
 
-	    // Map and Reduce to get list of all airports
-	    val mappedAirports = withoutHeader.flatMap( row => {
-	    	val a = Array(index("origin"), index("dest"))
-	    	for (e <- a) yield (Tuple5(row(e), "", "", "", "") , 1)
+	    // Get list of all airports
+	    val airportIndexes = Array(
+    		Tuple3(index("origin"), index("origin_city_name"), index("origin_state_nm")),
+    		Tuple3(index("dest"), index("dest_city_name"), index("dest_state_nm"))
+    	)
+
+	    val airportData = withoutHeader.flatMap( row => {
+	    	for (e <- airportIndexes) yield Tuple3(row(e._1), row(e._2), row(e._3))
 	    })
-	    val reducedAirports = mappedAirports.reduceByKey(_ + _)
 
-	    //val backToArray = reducedFlights.map( tuple => Array(tuple._1._1, tuple._1._2, tuple._1._3, tuple._1._4, tuple._1._5, tuple._2.toString) )
-
-	    generateFile(
+	    // Generate csv files
+	    generateAirportFile(
 	    	"airports_" + i +".csv",
-	    	reducedAirports,
-	    	tuple => Array(tuple._1._1, "Airport", tuple._1._1),
-	    	// backToArray,
-	    	// columns => Array(columns(0), "Airport", columns(0)),
-	    	"id:ID(Airport),:LABEL,name",
+	    	airportData,
+	    	tuple => Array(tuple._1, "Airport", tuple._2, tuple._3),
+	    	"id:ID(Airport),:LABEL,city,state",
 	    	distinct = true
 	    )
 
-	    generateFile(
+	    generateRoutesFile(
 	    	"routes_" + i +".csv",
-	    	reducedFlights,
+	    	flightsData,
 	    	tuple => Array(tuple._1._1, tuple._1._2, "FLIGHT_TO", tuple._1._3, tuple._1._4, tuple._1._5, tuple._2.toString),
-	    	// backToArray,
-	    	// columns => Array(columns(0), columns(1), "FLIGHT_TO", columns(2), columns(3), columns(4), columns(5)),
 	    	":START_ID(Airport),:END_ID(Airport),:TYPE,year,month,day,frequency",
 	    	distinct = true
 	    )
@@ -102,8 +101,26 @@ object PreprocessCSVforNeo4j {
     MyFileUtil.copyMergeWithHeader(hdfs, new Path(srcPath), hdfs, new Path(dstPath), false, hadoopConfig, header)
 	}
 
-	def generateFile(file: String, withoutHeader: RDD[Tuple2[Tuple5[String, String, String, String, String], scala.Int]], fn: Tuple2[Tuple5[String, String, String, String, String], scala.Int] => Array[String], header: String , distinct:Boolean = true, separator: String = ",") = {
-  	//def generateFile(file: String, withoutHeader: RDD[Array[String]], fn: Array[String] => Array[String], header: String , distinct:Boolean = true, separator: String = ",") = {	
+	def generateRoutesFile(file: String, withoutHeader: RDD[Tuple2[Tuple5[String, String, String, String, String], scala.Int]], fn: Tuple2[Tuple5[String, String, String, String, String], scala.Int] => Array[String], header: String , distinct:Boolean = true, separator: String = ",") = {
+		val outputFile = "tmp/" + file
+		FileUtil.fullyDelete(new File(outputFile))
+
+		val tmpFile = "tmp/" + System.currentTimeMillis() + "-" + file
+		val rows: RDD[String] = withoutHeader.mapPartitions(lines => {
+  		lines.map(line => {
+    		fn(line).mkString(separator)
+  		})
+		})
+
+		if (distinct) rows.distinct() saveAsTextFile tmpFile
+		else rows.saveAsTextFile(tmpFile)
+
+		merge(tmpFile, outputFile, header)
+
+		FileUtil.fullyDelete(new File(tmpFile))
+	}
+
+	def generateAirportFile(file: String, withoutHeader: RDD[Tuple3[String, String, String]], fn: Tuple3[String, String, String] => Array[String], header: String , distinct:Boolean = true, separator: String = ",") = {
 		val outputFile = "tmp/" + file
 		FileUtil.fullyDelete(new File(outputFile))
 

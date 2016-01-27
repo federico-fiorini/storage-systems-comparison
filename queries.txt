@@ -1,0 +1,11 @@
+1. Find the most frequent route per month (with only airport ID)
+ 1.b. With airports information (city, state)
+2. Find the most frequent route per year
+ 2.b. With airports information (city, state)
+3. Find the airport with more flights (in and out) per month
+4. Find the airport with more flights (in and out) per year
+5. Find the fastest way (with less changes) from airport A to airport B
+ 5.b. Consider only high frequence routes (top 75%)
+6. Find the state with more internal flights
+7. Find the state with more external flights
+8. Find the state with more total flights
