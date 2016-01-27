@@ -24,3 +24,7 @@ FINAL="neo4j-import --into tmp/neo"$COMMAND" --skip-duplicate-nodes true"
 
 # Import to new neo4j database
 $FINAL
+
+# Remove temporary files
+rm -rf tmp/airports*
+rm -rf tmp/routes*

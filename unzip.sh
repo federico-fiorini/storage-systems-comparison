@@ -1,8 +1,10 @@
 #!/bin/bash
 
-if [ $1 = "--help" ]; then
-    printf "\n\tUnzip all the file in the current directory.\n\tWith --keep option it will keep the zip files, otherwise they will be deleted\n\n"
-    exit
+if ! [ $# -eq 0 ]; then
+  if [ $1 = "--help" ]; then
+      printf "\n\tUnzip all the file in the current directory.\n\tWith --keep option it will keep the zip files, otherwise they will be deleted\n\n"
+      exit
+  fi
 fi
 
 k=0
@@ -23,6 +25,8 @@ done
 rm -Rf ./*.zip-dir
 
 # Remove
-if ! [ $1 = "--keep" ]; then
+if ! [ $# -eq 0 ]; then
+  if ! [ $1 = "--keep" ]; then
     rm -Rf ./*.zip
+  fi
 fi
