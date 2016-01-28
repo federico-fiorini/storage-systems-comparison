@@ -76,21 +76,36 @@ object ImportToMongo {
     val withoutHeader: RDD[Array[String]] = dropHeader(rows)
 
     var index = Map[String, Int]()
-    val columns = List("year", "month", "day_of_month", "origin", "dest")
+    val columns = List("year", "month", "day_of_month", "origin", "origin_city_name",
+        "origin_state_nm", "dest", "dest_city_name", "dest_state_nm")
     
     for (columnName <- columns) {
       index = index + (columnName -> header.indexOf(columnName))
     }
 
-    val tuples = withoutHeader.map(row => ( Tuple5(row(index("year")), row(index("month")), row(index("day_of_month")), row(index("origin")), row(index("dest"))), 1 ) )
+    val tuples = withoutHeader.map(row => ( Tuple9(row(index("year")), row(index("month")), row(index("day_of_month")),
+      row(index("origin")), row(index("origin_city_name")), row(index("origin_state_nm")), row(index("dest")),
+      row(index("dest_city_name")), row(index("dest_state_nm"))), 1 ))
+
     val flightsCount = tuples.reduceByKey(_ + _)
     val pairs = flightsCount.map(tuple => (null, {
+        
+        val origin = new BasicBSONObject()
+        origin.put("code", tuple._1._4)
+        origin.put("city", tuple._1._5)
+        origin.put("state", tuple._1._6)
+
+        val dest = new BasicBSONObject()
+        dest.put("code", tuple._1._7)
+        dest.put("city", tuple._1._8)
+        dest.put("state", tuple._1._9)
+
         val bson = new BasicBSONObject()
+        bson.put("origin", origin)
+        bson.put("destination", dest)
         bson.put("year", tuple._1._1)
         bson.put("month", tuple._1._2)
         bson.put("day", tuple._1._3)
-        bson.put("origin", tuple._1._4)
-        bson.put("destination", tuple._1._5)
 
         val javaint: java.lang.Integer = tuple._2 // Convert from scala.Int to java.lang.Integer
         bson.put("frequency", javaint)
