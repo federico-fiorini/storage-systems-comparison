@@ -60,8 +60,8 @@ def initMysql():
   sql = """
     CREATE TABLE `%s`.`routes` (
     `id` int(11) NOT NULL AUTO_INCREMENT,
-    `origin` varchar(10) DEFAULT NULL,
-    `destination` varchar(10) DEFAULT NULL,
+    `origin` varchar(3) DEFAULT NULL,
+    `destination` varchar(3) DEFAULT NULL,
     `year` int(11) DEFAULT NULL,
     `month` int(11) DEFAULT NULL,
     `day` int(11) DEFAULT NULL,
@@ -70,7 +70,7 @@ def initMysql():
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
   CREATE TABLE `%s`.`airports` (
-    `code` varchar(10) DEFAULT NULL,
+    `code` varchar(3) DEFAULT NULL,
     `city` varchar(55) DEFAULT NULL,
     `state` varchar(55) DEFAULT NULL,
     PRIMARY KEY (`code`)
