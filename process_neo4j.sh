@@ -1,6 +1,13 @@
 # Remove old database
 rm -rf tmp/neo
 
+JARS=""
+
+# Find list of jars to include
+for filename in lib/NEO4J_*; do
+    JARS=$JARS$filename","
+done
+
 # Run preprocess
 SPARK_SUBMIT=${SPARK_HOME%/}"/bin/spark-submit --class PreprocessCSVforNeo4j --master local[8] target/scala-2.10/storage-systems-comparison_2.10-1.0.jar"
 $SPARK_SUBMIT
