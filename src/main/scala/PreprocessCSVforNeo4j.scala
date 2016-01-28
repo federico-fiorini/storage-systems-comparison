@@ -64,7 +64,7 @@ object PreprocessCSVforNeo4j {
 	    generateRoutesFile(
 	    	"routes_" + i +".csv",
 	    	flightsData,
-	    	tuple => Array(tuple._1._1, tuple._1._2, "FLIGHT_TO", tuple._1._3, tuple._1._4, tuple._1._5, tuple._2.toString),
+	    	tuple => Array(tuple._1._1, tuple._1._2, "DAILY_FLIGHT", tuple._1._3, tuple._1._4, tuple._1._5, tuple._2.toString),
 	    	":START_ID(Airport),:END_ID(Airport),:TYPE,year,month,day,frequency",
 	    	distinct = true
 	    )
