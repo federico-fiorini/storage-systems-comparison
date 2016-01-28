@@ -58,6 +58,13 @@ def initMysql():
 
   # Create table
   sql = """
+    CREATE TABLE `%s`.`airports` (
+    `code` varchar(3) DEFAULT NULL,
+    `city` varchar(55) DEFAULT NULL,
+    `state` varchar(55) DEFAULT NULL,
+    PRIMARY KEY (`code`)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
     CREATE TABLE `%s`.`routes` (
     `id` int(11) NOT NULL AUTO_INCREMENT,
     `origin` varchar(3) DEFAULT NULL,
@@ -66,16 +73,13 @@ def initMysql():
     `month` int(11) DEFAULT NULL,
     `day` int(11) DEFAULT NULL,
     `frequency` int(11) DEFAULT NULL,
-    PRIMARY KEY (`id`)
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`origin`) REFERENCES `%s`.`airports` (`code`),
+    FOREIGN KEY (`destination`) REFERENCES `%s`.`airports` (`code`),
+    INDEX (`origin`),
+    INDEX (`destination`)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-  CREATE TABLE `%s`.`airports` (
-    `code` varchar(3) DEFAULT NULL,
-    `city` varchar(55) DEFAULT NULL,
-    `state` varchar(55) DEFAULT NULL,
-    PRIMARY KEY (`code`)
-  ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-  """ % ( mysqlDatabase, mysqlDatabase )
+  """ % ( mysqlDatabase, mysqlDatabase, mysqlDatabase, mysqlDatabase )
   query.execute(sql)
 
   conn.close()
@@ -107,6 +111,33 @@ def importToMysql(filename):
     indexes[columnName] = header.index(columnName)
 
   withoutHeader = arrays.mapPartitionsWithIndex(removeHeader)
+
+  ### Import Airports
+  airportIndexes = [(indexes["origin"], indexes["origin_city_name"], indexes["origin_state_nm"]),
+                    (indexes["dest"], indexes["dest_city_name"], indexes["dest_state_nm"])]
+
+  # Map and Reduce to get list of all airports
+  airport_tuples = withoutHeader.flatMap( lambda row: getAirportsFromFlight(row, airportIndexes) ).distinct()
+  airports = airport_tuples.map( 
+    lambda row: Row(
+        code = row[0],
+        city = row[1],
+        state = row[2]
+      )
+    )
+
+  # Infer the schema, and register the DataFrame as a table.
+  airports_column_order = ["code", "city", "state"]
+  airportsDataFrame = sqlContext.createDataFrame(airports)[airports_column_order]
+
+  airportsDataFrame.write.jdbc(
+    url = "jdbc:mysql://" + mysqlHost + ":" + mysqlPort, 
+    table = mysqlDatabase + ".airports", 
+    mode = "append", 
+    properties = {"user":mysqlUser, "password":mysqlPassword, "driver":"com.mysql.jdbc.Driver"}
+  )
+
+  ### Import routes
   flight_tuples = withoutHeader.map( lambda row: ((row[indexes['origin']], row[indexes['dest']], row[indexes['year']], row[indexes['month']], row[indexes['day_of_month']]), 1)).reduceByKey(lambda a, b: a + b) #group with spark
 
   # Convert to Rows
@@ -146,30 +177,6 @@ def importToMysql(filename):
   flightsDataFrame.write.jdbc(
     url = "jdbc:mysql://" + mysqlHost + ":" + mysqlPort, 
     table = mysqlDatabase + ".routes", 
-    mode = "append", 
-    properties = {"user":mysqlUser, "password":mysqlPassword, "driver":"com.mysql.jdbc.Driver"}
-  )
-
-  airportIndexes = [(indexes["origin"], indexes["origin_city_name"], indexes["origin_state_nm"]),
-                    (indexes["dest"], indexes["dest_city_name"], indexes["dest_state_nm"])]
-
-  # Map and Reduce to get list of all airports
-  airport_tuples = withoutHeader.flatMap( lambda row: getAirportsFromFlight(row, airportIndexes) ).distinct()
-  airports = airport_tuples.map( 
-    lambda row: Row(
-        code = row[0],
-        city = row[1],
-        state = row[2]
-      )
-    )
-
-  # Infer the schema, and register the DataFrame as a table.
-  airports_column_order = ["code", "city", "state"]
-  airportsDataFrame = sqlContext.createDataFrame(airports)[airports_column_order]
-
-  airportsDataFrame.write.jdbc(
-    url = "jdbc:mysql://" + mysqlHost + ":" + mysqlPort, 
-    table = mysqlDatabase + ".airports", 
     mode = "append", 
     properties = {"user":mysqlUser, "password":mysqlPassword, "driver":"com.mysql.jdbc.Driver"}
   )
