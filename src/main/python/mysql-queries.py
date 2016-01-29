@@ -51,7 +51,7 @@ table = PrettyTable(["year", "month", "origin", "destination", "max_monthly_freq
 for row in query.fetchall():
 	table.add_row(row)
 print table
-print "Time to read: " + str(b-a) + "\n"
+print "Time: " + str(b-a) + "\n"
 
 # Query 1.b
 print "=========================================================================================="
@@ -77,7 +77,7 @@ table = PrettyTable(["year", "month", "origin", "origin_city", "origin_state", "
 for row in query.fetchall():
 	table.add_row(row)
 print table
-print "Time to read: " + str(b-a) + "\n"
+print "Time: " + str(b-a) + "\n"
 
 
 # Query 2
@@ -100,7 +100,7 @@ table = PrettyTable(["year", "origin", "destination", "max_yearly_freq"])
 for row in query.fetchall():
 	table.add_row(row)
 print table
-print "Time to read: " + str(b-a) + "\n"
+print "Time: " + str(b-a) + "\n"
 
 # Query 2.b
 print "=========================================================================================="
@@ -126,4 +126,69 @@ table = PrettyTable(["year", "origin", "origin_city", "origin_state", "destinati
 for row in query.fetchall():
 	table.add_row(row)
 print table
-print "Time to read: " + str(b-a) + "\n"
+print "Time: " + str(b-a) + "\n"
+
+
+# Query 3
+print "======================================================================="
+print "Query #3: Find the airport with more flights (in and out) per month"
+a = datetime.datetime.now().replace(microsecond=0)
+
+sql = """
+	SELECT year, month, airport, max(flights) AS tot_flights
+	FROM
+		(SELECT year, month, airport, sum(monthly_freq) AS flights
+		FROM
+			(
+				(SELECT r.year, r.month, r.origin AS airport, sum(r.frequency) AS monthly_freq
+				FROM flights.routes as r
+				GROUP BY r.year, r.month, r.origin)
+			UNION
+				(SELECT r.year, r.month, r.destination AS airport, sum(r.frequency) AS monthly_freq
+				FROM flights.routes as r
+				GROUP BY r.year, r.month, r.destination)
+			) as u
+		GROUP BY year, month, airport
+		ORDER BY sum(monthly_freq) DESC) as m
+	GROUP BY year, month;
+	"""
+query.execute(sql)
+b = datetime.datetime.now().replace(microsecond=0)
+
+table = PrettyTable(["year", "month", "airport", "tot_flights"])
+for row in query.fetchall():
+	table.add_row(row)
+print table
+print "Time: " + str(b-a) + "\n"
+
+# Query 4
+print "======================================================================="
+print "Query #4: Find the airport with more flights (in and out) per year"
+a = datetime.datetime.now().replace(microsecond=0)
+
+sql = """
+	SELECT year, airport, max(flights) AS tot_flights
+	FROM 
+		(SELECT year, airport, sum(yearly_freq) AS flights
+		FROM
+			(
+				(SELECT r.year, r.origin AS airport, sum(r.frequency) AS yearly_freq
+				FROM flights.routes as r
+				GROUP BY r.year, r.origin)
+			UNION
+				(SELECT r.year, r.destination AS airport, sum(r.frequency) AS yearly_freq
+				FROM flights.routes as r
+				GROUP BY r.year, r.destination)
+			) as u
+		GROUP BY year, airport
+		ORDER BY sum(yearly_freq) DESC) as m
+	GROUP BY year;
+	"""
+query.execute(sql)
+b = datetime.datetime.now().replace(microsecond=0)
+
+table = PrettyTable(["year", "airport", "tot_flights"])
+for row in query.fetchall():
+	table.add_row(row)
+print table
+print "Time: " + str(b-a) + "\n"
