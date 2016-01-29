@@ -1,5 +1,7 @@
-# Remove old database
+# Remove old database and tmp csv files
 rm -rf tmp/neo
+rm -rf tmp/airports*
+rm -rf tmp/routes*
 
 JARS=""
 
@@ -8,29 +10,47 @@ for filename in lib/NEO4J_*; do
     JARS=$JARS$filename","
 done
 
+JARS=${JARS%?}
+
 # Run preprocess
 SPARK_SUBMIT=${SPARK_HOME%/}"/bin/spark-submit --class PreprocessCSVforNeo4j --master local[8] target/scala-2.10/storage-systems-comparison_2.10-1.0.jar"
 $SPARK_SUBMIT
 
+
+# Merge airport csv files
+./merge-csv.sh tmp/airports
+
+# Remove duplicates
+awk '!a[$0]++' tmp/airports.csv > tmp/air.csv
+
+rm tmp/airports.csv
+mv tmp/air.csv tmp/airports.csv
+
 # Find list of csv files and build neo4j-import command
-COMMAND=""
-NODE=" --nodes "
-REL=" --relationships "
 
 # Find list of airports files
+NODES="--nodes "
+
 for filename in tmp/airports*; do
-    COMMAND=$COMMAND$NODE$filename
+    NODES=$NODES$filename","
 done
+
+NODES=${NODES%?}
+
 
 # Find list of routes files
+REL="--relationships "
+
 for filename in tmp/routes*; do
-    COMMAND=$COMMAND$REL$filename
+    REL=$REL$filename","
 done
 
-FINAL="neo4j-import --into tmp/neo"$COMMAND" --skip-duplicate-nodes true"
+REL=${REL%?}
+
+COMMAND="neo4j-import --into tmp/neo $NODES $REL --skip-duplicate-nodes"
 
 # Import to new neo4j database
-$FINAL
+$COMMAND
 
 # Remove temporary files
 rm -rf tmp/airports*
