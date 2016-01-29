@@ -33,10 +33,10 @@ def connectToMysql():
 
   # Create connection
   return MySQLdb.connect(
-      host = mysqlHost,
-      user = mysqlUser,
-      passwd = mysqlPassword,
-      db = mysqlDatabase,
+    host = mysqlHost,
+    user = mysqlUser,
+    passwd = mysqlPassword,
+    db = mysqlDatabase,
   )
 
 def initMysql():
@@ -97,6 +97,19 @@ def getAirportsFromFlight(flightRow, airportIndexes):
   for indexTuple in airportIndexes:
     yield (flightRow[indexTuple[0]], flightRow[indexTuple[1]], flightRow[indexTuple[2]])
 
+def importAirports(airportTuples):
+  # Convert the airport tuples to strings: ("DFW", "Dallas - Fort Worth", "Texas")
+  airportsValues = airportTuples.map( lambda row: "(\"{}\",\"{}\",\"{}\")".format(row[0],row[1],row[2]) )
+  airportsNum = airportsValues.count()
+  values = ','.join(airportsValues.take(airportsNum))
+
+  # Connect to MySQL
+  conn = connectToMysql()
+  query = conn.cursor()
+  sql = "INSERT IGNORE INTO `flights`.`airports` (`code`, `city`, `state` ) VALUES {}".format(values)
+  query.execute(sql)
+  conn.commit()
+
 def importToMysql(filename):
   # Load file
   lines = sc.textFile(filename)
@@ -117,25 +130,10 @@ def importToMysql(filename):
                     (indexes["dest"], indexes["dest_city_name"], indexes["dest_state_nm"])]
 
   # Map and Reduce to get list of all airports
-  airport_tuples = withoutHeader.flatMap( lambda row: getAirportsFromFlight(row, airportIndexes) ).distinct()
-  airports = airport_tuples.map( 
-    lambda row: Row(
-        code = row[0],
-        city = row[1],
-        state = row[2]
-      )
-    )
+  airportTuples = withoutHeader.flatMap( lambda row: getAirportsFromFlight(row, airportIndexes) ).distinct()
 
-  # Infer the schema, and register the DataFrame as a table.
-  airports_column_order = ["code", "city", "state"]
-  airportsDataFrame = sqlContext.createDataFrame(airports)[airports_column_order]
-
-  airportsDataFrame.write.jdbc(
-    url = "jdbc:mysql://" + mysqlHost + ":" + mysqlPort, 
-    table = mysqlDatabase + ".airports", 
-    mode = "append", 
-    properties = {"user":mysqlUser, "password":mysqlPassword, "driver":"com.mysql.jdbc.Driver"}
-  )
+  # Insert Airports without the DataFrame write
+  importAirports(airportTuples)
 
   ### Import routes
   flight_tuples = withoutHeader.map( lambda row: ((row[indexes['origin']], row[indexes['dest']], row[indexes['year']], row[indexes['month']], row[indexes['day_of_month']]), 1)).reduceByKey(lambda a, b: a + b) #group with spark
