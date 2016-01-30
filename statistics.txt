@@ -1,0 +1,4 @@
+IMPORT FULL DATASET
+===================
+
+MySQL: ./process_mysql.sh [import via Spark] Time: 3h 24m 42s
