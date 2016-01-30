@@ -354,3 +354,96 @@ for document in cursor:
   print(document)
 
 print "\nTime: " + str(b-a)
+
+# Query 7
+print "======================================================================="
+print "Query #7: Find the state with more external flights (per month)"
+print "-----------------------------------------------------------------------"
+a = datetime.datetime.now().replace(microsecond=0)
+
+cursor = db.routes.aggregate(
+  [
+    {
+      "$project": {
+        "year": "$year",
+        "month": "$month",
+        "state": "$origin.state",
+        "frequency": "$frequency",
+        "same_state": { "$strcasecmp": ["$origin.state","$destination.state"] }
+      }
+    },
+    { "$match": { "same_state": { "$ne": 0 } } },
+    {
+      "$group": {
+        "_id": {"year":"$year", "month":"$month", "state":"$state"},
+        "monthly_freq": {"$sum": "$frequency"},
+        "year": { "$first": "$year" },
+        "month": { "$first": "$month" },
+        "state": { "$first": "$state" }
+      }
+    },
+    { "$sort": { "monthly_freq": -1 } },
+    {
+      "$group": {
+        "_id": {"year": "$year", "month":"$month"},
+        "year": { "$first": "$year" },
+        "month": { "$first": "$month" },
+        "state": { "$first": "$state" },
+        "monthly_freq": {"$max": "$monthly_freq"}
+      }
+    },
+    { "$project": {"_id":0, "year": 1, "month": 1, "monthly_freq": 1, "state": 1}}
+  ]
+)
+
+b = datetime.datetime.now().replace(microsecond=0)
+
+for document in cursor:
+  print(document)
+
+print "\nTime: " + str(b-a)
+
+# Query 7.b
+print "======================================================================="
+print "Query #7.b: Find the state with more external flights (per year)"
+print "-----------------------------------------------------------------------"
+a = datetime.datetime.now().replace(microsecond=0)
+
+cursor = db.routes.aggregate(
+  [
+    {
+      "$project": {
+        "year": "$year",
+        "state": "$origin.state",
+        "frequency": "$frequency",
+        "same_state": { "$strcasecmp": ["$origin.state","$destination.state"] }
+      }
+    },
+    { "$match": { "same_state": { "$ne": 0 } } },
+    {
+      "$group": {
+        "_id": {"year":"$year", "state":"$state"},
+        "yearly_freq": {"$sum": "$frequency"},
+        "year": { "$first": "$year" },
+        "state": { "$first": "$state" }
+      }
+    },
+    { "$sort": { "yearly_freq": -1 } },
+    {
+      "$group": {
+        "_id": {"year": "$year"},
+        "year": { "$first": "$year" },
+        "state": { "$first": "$state" },
+        "yearly_freq": {"$max": "$yearly_freq"}
+      }
+    },
+    { "$project": {"_id":0, "year": 1, "yearly_freq": 1, "state": 1}}
+  ]
+)
+
+b = datetime.datetime.now().replace(microsecond=0)
+
+for document in cursor:
+  print(document)
+
+print "\nTime: " + str(b-a)
