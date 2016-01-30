@@ -3,3 +3,4 @@ IMPORT FULL DATASET
 
 MySQL: ./process_mysql.sh [spark-submit with default parameters] Time: 3h 24m 42s
 MongoDB: /process_mmongo.sh [spark-submit with default parameters] Time: 41m 50s
+Neo4j: /process_neo4j.sh [spark-submit with default parameters] Time: 57m 23s
