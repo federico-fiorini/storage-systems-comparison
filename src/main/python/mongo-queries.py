@@ -32,7 +32,8 @@ cursor = db.routes.aggregate(
       }
     },
     { "$project": {"_id": 0, "year": 1, "month": 1 , "monthly_freq": 1, "origin": 1, "destination": 1 } }
-  ]
+  ],
+  allowDiskUse=True
 )
 
 b = datetime.datetime.now().replace(microsecond=0)
@@ -41,6 +42,7 @@ for document in cursor:
   print(document)
 
 print "\nTime:" + str(b-a)
+
 
 # Query 1.b
 print "=========================================================================================="
@@ -70,7 +72,8 @@ cursor = db.routes.aggregate(
       }
     },
     { "$project": {"_id": 0, "year": 1, "month": 1 , "monthly_freq": 1, "origin": 1, "destination": 1 } }
-  ]
+  ],
+  allowDiskUse=True
 )
 
 b = datetime.datetime.now().replace(microsecond=0)
@@ -106,7 +109,8 @@ cursor = db.routes.aggregate(
       }
     },
     { "$project": {"_id": 0, "year": 1, "yearly_freq": 1, "origin": 1, "destination": 1 } }
-  ]
+  ],
+  allowDiskUse=True
 )
 
 b = datetime.datetime.now().replace(microsecond=0)
@@ -137,7 +141,8 @@ cursor = db.routes.aggregate(
     { 
       "$project": {
         "_id": 0, 
-        "airportFrequencies": [
+        "airportFrequencies":
+        [
           { 
             "year": "$year",
             "month": "$month",
@@ -182,7 +187,8 @@ cursor = db.routes.aggregate(
       }
     },
     { "$project": {"_id":0, "year": 1, "month": 1, "airport": 1, "monthly_freq_in_out": 1}}
-  ]
+  ],
+  allowDiskUse=True
 )
 
 b = datetime.datetime.now().replace(microsecond=0)
@@ -191,6 +197,7 @@ for document in cursor:
   print(document)
 
 print "\nTime: " + str(b-a)
+
 
 # Query 4
 print "======================================================================="
@@ -252,7 +259,8 @@ cursor = db.routes.aggregate(
       }
     },
     { "$project": {"_id":0, "year": 1, "airport": 1, "yearly_freq_in_out": 1}}
-  ]
+  ],
+  allowDiskUse=True
 )
 
 b = datetime.datetime.now().replace(microsecond=0)
@@ -300,7 +308,8 @@ cursor = db.routes.aggregate(
       }
     },
     { "$project": {"_id":0, "year": 1, "month": 1, "monthly_freq": 1, "state": 1}}
-  ]
+  ],
+  allowDiskUse=True
 )
 
 b = datetime.datetime.now().replace(microsecond=0)
@@ -345,7 +354,8 @@ cursor = db.routes.aggregate(
       }
     },
     { "$project": {"_id":0, "year": 1, "yearly_freq": 1, "state": 1}}
-  ]
+  ],
+  allowDiskUse=True
 )
 
 b = datetime.datetime.now().replace(microsecond=0)
@@ -393,7 +403,8 @@ cursor = db.routes.aggregate(
       }
     },
     { "$project": {"_id":0, "year": 1, "month": 1, "monthly_freq": 1, "state": 1}}
-  ]
+  ],
+  allowDiskUse=True
 )
 
 b = datetime.datetime.now().replace(microsecond=0)
@@ -438,7 +449,8 @@ cursor = db.routes.aggregate(
       }
     },
     { "$project": {"_id":0, "year": 1, "yearly_freq": 1, "state": 1}}
-  ]
+  ],
+  allowDiskUse=True
 )
 
 b = datetime.datetime.now().replace(microsecond=0)
@@ -486,7 +498,8 @@ cursor = db.routes.aggregate(
       }
     },
     { "$project": {"_id":0, "year": 1, "month": 1, "monthly_freq": 1, "state": 1}}
-  ]
+  ],
+  allowDiskUse=True
 )
 
 b = datetime.datetime.now().replace(microsecond=0)
@@ -531,7 +544,8 @@ cursor = db.routes.aggregate(
       }
     },
     { "$project": {"_id":0, "year": 1, "yearly_freq": 1, "state": 1}}
-  ]
+  ],
+  allowDiskUse=True
 )
 
 b = datetime.datetime.now().replace(microsecond=0)
