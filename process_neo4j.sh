@@ -13,7 +13,7 @@ done
 JARS=${JARS%?}
 
 # Run preprocess
-SPARK_SUBMIT=${SPARK_HOME%/}"/bin/spark-submit --class PreprocessCSVforNeo4j --master local[8] target/scala-2.10/storage-systems-comparison_2.10-1.0.jar"
+SPARK_SUBMIT=${SPARK_HOME%/}"/bin/spark-submit --class PreprocessCSVforNeo4j --master local[*] target/scala-2.10/storage-systems-comparison_2.10-1.0.jar"
 $SPARK_SUBMIT
 
 
@@ -21,7 +21,7 @@ $SPARK_SUBMIT
 ./merge-csv.sh tmp/airports
 
 # Remove duplicates
-awk '!a[$0]++' tmp/airports.csv > tmp/air.csv
+(head -n 1 tmp/airports.csv && tail -n +2 tmp/airports.csv | sort -u -t',' -k1,1) > tmp/air.csv
 
 rm tmp/airports.csv
 mv tmp/air.csv tmp/airports.csv
@@ -53,5 +53,5 @@ COMMAND="neo4j-import --into tmp/neo $NODES $REL --skip-duplicate-nodes"
 $COMMAND
 
 # Remove temporary files
-rm -rf tmp/airports*
-rm -rf tmp/routes*
+#rm -rf tmp/airports*
+#rm -rf tmp/routes*

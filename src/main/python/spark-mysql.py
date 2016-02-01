@@ -180,7 +180,7 @@ def importToMysql(filename):
   )
 
 # Init spark context
-sc = SparkContext('local')
+sc = SparkContext('local[*]')
 sqlContext = SQLContext(sc)
 
 # Init mysql table

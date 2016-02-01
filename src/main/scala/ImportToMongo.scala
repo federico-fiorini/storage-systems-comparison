@@ -18,7 +18,9 @@ import scala.collection.Map
 object ImportToMongo {
   def main(args: Array[String]) { 
 
-    val conf = new SparkConf().setAppName("Flights Dataset")
+    val conf = new SparkConf()
+      .setMaster("local[*]")
+      .setAppName("Flights Dataset")
     val sc = new SparkContext(conf)
 
     cleanMongo()

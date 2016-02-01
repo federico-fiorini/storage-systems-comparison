@@ -15,8 +15,8 @@ MongoDB: /process_mmongo.sh
 Neo4j: /process_neo4j.sh
  - spark-submit with default parameters
  - Time: 57m 23s (56m 18s spark + 1m 5s neo4j-import)
- - Total airport nodes: 399
- - Total route relationships: 35.043.088
+ - Total airport nodes: 392
+ - Total route relationships: 35.042.751
 
 
 QUERIES

@@ -11,12 +11,13 @@ import org.apache.spark.sql.{SQLContext, Row, DataFrame}
 
 import scala.RuntimeException
 
-//import org.anormcypher._
-
 object PreprocessCSVforNeo4j {  
   def main(args: Array[String]) { 
 
-  	val conf = new SparkConf().setAppName("Flights Dataset")
+  	val conf = new SparkConf()
+  		.setMaster("local[*]")
+  		.setAppName("Flights Dataset")
+
     val sc = new SparkContext(conf)
 
     val ext = List("csv")
@@ -70,17 +71,6 @@ object PreprocessCSVforNeo4j {
 	    )
 
 	    i = i + 1
-
-
-	    //implicit val connection = Neo4jREST("localhost", 7474, "/db/routes/")
-
-	   //  airportData.map( a =>
-		  //   Cypher("CREATE(:Airport {code:{code}, city:{city}, state:{state}})")
-		  //   .on("code" -> a._1)
-		  //   .on("city" -> a._2)
-		  //   .on("state" -> a._3)
-		  //   .execute()
-		  // )
 		}
   }
 
