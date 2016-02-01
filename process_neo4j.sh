@@ -53,5 +53,5 @@ COMMAND="neo4j-import --into tmp/neo $NODES $REL --skip-duplicate-nodes"
 $COMMAND
 
 # Remove temporary files
-#rm -rf tmp/airports*
-#rm -rf tmp/routes*
+rm -rf tmp/airports*
+rm -rf tmp/routes*
