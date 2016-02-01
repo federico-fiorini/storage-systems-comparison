@@ -32,30 +32,8 @@ conn = connectToMysql()
 query = conn.cursor()
 
 # Query 1
-print "======================================================================="
-print "Query #1: Find the most frequent route per month (with only airport ID)"
-a = datetime.datetime.now().replace(microsecond=0)
-
-sql = """
-	SELECT r2.year, r2.month, r2.origin, r2.destination, max(r2.monthly_freq) AS max_monthly_freq
-	FROM (SELECT r.year, r.month, r.origin, r.destination, sum(r.frequency) AS monthly_freq
-		FROM flights.routes as r
-		GROUP BY r.year, r.month, r.origin, r.destination
-		ORDER BY sum(r.frequency) DESC) as r2
-	GROUP BY r2.year, r2.month;
-	"""
-query.execute(sql)
-b = datetime.datetime.now().replace(microsecond=0)
-
-table = PrettyTable(["year", "month", "origin", "destination", "max_monthly_freq"])
-for row in query.fetchall():
-	table.add_row(row)
-print table
-print "Time: " + str(b-a) + "\n"
-
-# Query 1.b
-print "=========================================================================================="
-print "Query #1.b: Find the most frequent route per month with airports information (city, state)"
+print "================================================"
+print "Query #1: Find the most frequent route per month"
 a = datetime.datetime.now().replace(microsecond=0)
 
 sql = """
@@ -79,32 +57,9 @@ for row in query.fetchall():
 print table
 print "Time: " + str(b-a) + "\n"
 
-
-# Query 2
-print "======================================================================="
-print "Query #2: Find the most frequent route per year (with only airport ID)"
-a = datetime.datetime.now().replace(microsecond=0)
-
-sql = """
-	SELECT r2.year, r2.origin, r2.destination, max(r2.yearly_freq) AS max_yearly_freq
-	FROM (SELECT r.year, r.origin, r.destination, sum(r.frequency) AS yearly_freq
-		FROM flights.routes as r
-		GROUP BY r.year, r.origin, r.destination
-		ORDER BY sum(r.frequency) DESC) as r2
-	GROUP BY r2.year;
-	"""
-query.execute(sql)
-b = datetime.datetime.now().replace(microsecond=0)
-
-table = PrettyTable(["year", "origin", "destination", "max_yearly_freq"])
-for row in query.fetchall():
-	table.add_row(row)
-print table
-print "Time: " + str(b-a) + "\n"
-
-# Query 2.b
-print "=========================================================================================="
-print "Query #2.b: Find the most frequent route per year with airports information (city, state)"
+# Query 1.b
+print "================================================="
+print "Query #1.b: Find the most frequent route per year"
 a = datetime.datetime.now().replace(microsecond=0)
 
 sql = """
@@ -129,9 +84,9 @@ print table
 print "Time: " + str(b-a) + "\n"
 
 
-# Query 3
+# Query 2
 print "======================================================================="
-print "Query #3: Find the airport with more flights (in and out) per month"
+print "Query #2: Find the airport with more flights (in and out) per month"
 a = datetime.datetime.now().replace(microsecond=0)
 
 sql = """
@@ -161,9 +116,9 @@ for row in query.fetchall():
 print table
 print "Time: " + str(b-a) + "\n"
 
-# Query 4
+# Query 2.b
 print "======================================================================="
-print "Query #4: Find the airport with more flights (in and out) per year"
+print "Query #2.b: Find the airport with more flights (in and out) per year"
 a = datetime.datetime.now().replace(microsecond=0)
 
 sql = """
@@ -194,119 +149,117 @@ print table
 print "Time: " + str(b-a) + "\n"
 
 
+# Query 4
+print "==============================================================="
+print "Query #4: Find the state with more internal flights (per month)"
+a = datetime.datetime.now().replace(microsecond=0)
+
+sql = """
+	SELECT r1.year, r1.month, r1.state, max(r1.monthly_freq) as monthly_freq
+	FROM ( 
+		SELECT r.year, r.month, a1.state, sum(r.frequency) as monthly_freq
+		FROM flights.routes r
+		JOIN flights.airports a1 ON a1.code = r.origin
+		JOIN flights.airports a2 ON a2.code = r.destination
+		WHERE a1.state = a2.state
+		GROUP BY r.year, r.month, a1.state
+		ORDER BY sum(r.frequency) DESC ) as r1
+	GROUP BY r1.year, r1.month;
+	"""
+query.execute(sql)
+b = datetime.datetime.now().replace(microsecond=0)
+
+table = PrettyTable(["year", "month", "state", "monthly_freq"])
+for row in query.fetchall():
+	table.add_row(row)
+print table
+print "Time: " + str(b-a) + "\n"
+
+
+# Query 4.b
+print "================================================================"
+print "Query #4.b: Find the state with more internal flights (per year)"
+a = datetime.datetime.now().replace(microsecond=0)
+
+sql = """
+	SELECT r1.year, r1.state, max(r1.yearly_freq) as yearly_freq
+	FROM ( 
+		SELECT r.year, a1.state, sum(r.frequency) as yearly_freq
+		FROM flights.routes r
+		JOIN flights.airports a1 ON a1.code = r.origin
+		JOIN flights.airports a2 ON a2.code = r.destination
+		WHERE a1.state = a2.state
+		GROUP BY r.year, a1.state
+		ORDER BY sum(r.frequency) DESC ) as r1
+	GROUP BY r1.year;
+	"""
+query.execute(sql)
+b = datetime.datetime.now().replace(microsecond=0)
+
+table = PrettyTable(["year", "state", "yearly_freq"])
+for row in query.fetchall():
+	table.add_row(row)
+print table
+print "Time: " + str(b-a) + "\n"
+
+
+# Query 5
+print "================================================================================="
+print "Query #5: Find the state with more departure flights to another state (per month)"
+a = datetime.datetime.now().replace(microsecond=0)
+
+sql = """
+	SELECT r1.year, r1.month, r1.state, max(r1.monthly_freq) as monthly_freq
+	FROM ( 
+		SELECT r.year, r.month, a1.state, sum(r.frequency) as monthly_freq
+		FROM flights.routes r
+		JOIN flights.airports a1 ON a1.code = r.origin
+		JOIN flights.airports a2 ON a2.code = r.destination
+		WHERE a1.state <> a2.state
+		GROUP BY r.year, r.month, a1.state
+		ORDER BY sum(r.frequency) DESC ) as r1
+	GROUP BY r1.year, r1.month;
+	"""
+query.execute(sql)
+b = datetime.datetime.now().replace(microsecond=0)
+
+table = PrettyTable(["year", "month", "state", "monthly_freq"])
+for row in query.fetchall():
+	table.add_row(row)
+print table
+print "Time: " + str(b-a) + "\n"
+
+
+# Query 5.b
+print "==================================================================================="
+print "Query #5.b: Find the state with more departure flights to another state  (per year)"
+a = datetime.datetime.now().replace(microsecond=0)
+
+sql = """
+	SELECT r1.year, r1.state, max(r1.yearly_freq) as yearly_freq
+	FROM ( 
+		SELECT r.year, a1.state, sum(r.frequency) as yearly_freq
+		FROM flights.routes r
+		JOIN flights.airports a1 ON a1.code = r.origin
+		JOIN flights.airports a2 ON a2.code = r.destination
+		WHERE a1.state <> a2.state
+		GROUP BY r.year, a1.state
+		ORDER BY sum(r.frequency) DESC ) as r1
+	GROUP BY r1.year;
+	"""
+query.execute(sql)
+b = datetime.datetime.now().replace(microsecond=0)
+
+table = PrettyTable(["year", "state", "yearly_freq"])
+for row in query.fetchall():
+	table.add_row(row)
+print table
+print "Time: " + str(b-a) + "\n"
+
+
 # Query 6
-print "======================================================================="
-print "Query #6: Find the state with more internal flights (per month)"
-a = datetime.datetime.now().replace(microsecond=0)
-
-sql = """
-	SELECT r1.year, r1.month, r1.state, max(r1.monthly_freq) as monthly_freq
-	FROM ( 
-		SELECT r.year, r.month, a1.state, sum(r.frequency) as monthly_freq
-		FROM flights.routes r
-		JOIN flights.airports a1 ON a1.code = r.origin
-		JOIN flights.airports a2 ON a2.code = r.destination
-		WHERE a1.state = a2.state
-		GROUP BY r.year, r.month, a1.state
-		ORDER BY sum(r.frequency) DESC ) as r1
-	GROUP BY r1.year, r1.month;
-	"""
-query.execute(sql)
-b = datetime.datetime.now().replace(microsecond=0)
-
-table = PrettyTable(["year", "month", "state", "monthly_freq"])
-for row in query.fetchall():
-	table.add_row(row)
-print table
-print "Time: " + str(b-a) + "\n"
-
-
-# Query 6.b
-print "======================================================================="
-print "Query #6.b: Find the state with more internal flights (per year)"
-a = datetime.datetime.now().replace(microsecond=0)
-
-sql = """
-	SELECT r1.year, r1.state, max(r1.yearly_freq) as yearly_freq
-	FROM ( 
-		SELECT r.year, a1.state, sum(r.frequency) as yearly_freq
-		FROM flights.routes r
-		JOIN flights.airports a1 ON a1.code = r.origin
-		JOIN flights.airports a2 ON a2.code = r.destination
-		WHERE a1.state = a2.state
-		GROUP BY r.year, a1.state
-		ORDER BY sum(r.frequency) DESC ) as r1
-	GROUP BY r1.year;
-	"""
-query.execute(sql)
-b = datetime.datetime.now().replace(microsecond=0)
-
-table = PrettyTable(["year", "state", "yearly_freq"])
-for row in query.fetchall():
-	table.add_row(row)
-print table
-print "Time: " + str(b-a) + "\n"
-
-
-# Query 7
-print "======================================================================="
-print "Query #7: Find the state with more departure flights to another state (per month)"
-print "-----------------------------------------------------------------------"
-a = datetime.datetime.now().replace(microsecond=0)
-
-sql = """
-	SELECT r1.year, r1.month, r1.state, max(r1.monthly_freq) as monthly_freq
-	FROM ( 
-		SELECT r.year, r.month, a1.state, sum(r.frequency) as monthly_freq
-		FROM flights.routes r
-		JOIN flights.airports a1 ON a1.code = r.origin
-		JOIN flights.airports a2 ON a2.code = r.destination
-		WHERE a1.state <> a2.state
-		GROUP BY r.year, r.month, a1.state
-		ORDER BY sum(r.frequency) DESC ) as r1
-	GROUP BY r1.year, r1.month;
-	"""
-query.execute(sql)
-b = datetime.datetime.now().replace(microsecond=0)
-
-table = PrettyTable(["year", "month", "state", "monthly_freq"])
-for row in query.fetchall():
-	table.add_row(row)
-print table
-print "Time: " + str(b-a) + "\n"
-
-
-# Query 7.b
-print "======================================================================="
-print "Query #7.b: Find the state with more departure flights to another state  (per year)"
-a = datetime.datetime.now().replace(microsecond=0)
-
-sql = """
-	SELECT r1.year, r1.state, max(r1.yearly_freq) as yearly_freq
-	FROM ( 
-		SELECT r.year, a1.state, sum(r.frequency) as yearly_freq
-		FROM flights.routes r
-		JOIN flights.airports a1 ON a1.code = r.origin
-		JOIN flights.airports a2 ON a2.code = r.destination
-		WHERE a1.state <> a2.state
-		GROUP BY r.year, a1.state
-		ORDER BY sum(r.frequency) DESC ) as r1
-	GROUP BY r1.year;
-	"""
-query.execute(sql)
-b = datetime.datetime.now().replace(microsecond=0)
-
-table = PrettyTable(["year", "state", "yearly_freq"])
-for row in query.fetchall():
-	table.add_row(row)
-print table
-print "Time: " + str(b-a) + "\n"
-
-
-# Query 8
-print "======================================================================="
-print "Query #8: Find the state with more arrival flights from another state (per month)"
-print "-----------------------------------------------------------------------"
+print "================================================================================="
+print "Query #6: Find the state with more arrival flights from another state (per month)"
 a = datetime.datetime.now().replace(microsecond=0)
 
 sql = """
@@ -330,10 +283,9 @@ for row in query.fetchall():
 print table
 print "Time: " + str(b-a) + "\n"
 
-# Query 8.b
-print "======================================================================="
-print "Query #8.b: Find the state with more arrival flights from another state (per year)"
-print "-----------------------------------------------------------------------"
+# Query 6.b
+print "=================================================================================="
+print "Query #6.b: Find the state with more arrival flights from another state (per year)"
 a = datetime.datetime.now().replace(microsecond=0)
 
 sql = """
@@ -356,3 +308,4 @@ for row in query.fetchall():
 	table.add_row(row)
 print table
 print "Time: " + str(b-a) + "\n"
+

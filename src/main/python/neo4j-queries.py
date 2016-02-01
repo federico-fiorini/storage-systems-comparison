@@ -4,9 +4,9 @@ from py2neo import Graph, Node, Relationship
 graph = Graph()
 
 # Query 1
-print "======================================================================="
-print "Query #1: Find the most frequent route per month (with only airport ID)"
-print "-----------------------------------------------------------------------"
+print "================================================"
+print "Query #1: Find the most frequent route per month"
+print "------------------------------------------------"
 a = datetime.datetime.now().replace(microsecond=0)
 graph.cypher.execute("""
 	MATCH (a:Airport)-[d:DAILY_FLIGHTS]->(b:Airport)
@@ -17,26 +17,7 @@ graph.cypher.execute("""
 
 b = datetime.datetime.now().replace(microsecond=0)
 print "Time to aggregate in monthly frequency: " + str(b-a)
-print "-----------------------------------------------------------------------"
-
-print graph.cypher.execute("""
-	MATCH ()-[n:MONTHLY_FLIGHTS]->()
-	WITH n.year AS year, n.month AS month, max(n.frequency) AS max_month_freq
-	MATCH (a:Airport)-[n:MONTHLY_FLIGHTS]->(b:Airport)
-	WHERE n.frequency=max_month_freq
-	RETURN year, month, a.code AS origin, b.code AS dest, n.frequency AS frequency
-	""")
-
-c = datetime.datetime.now().replace(microsecond=0)
-print "Time to read: " + str(c-b) + "\n"
-
-
-# Query 1.b
-print "=========================================================================================="
-print "Query #1.b: Find the most frequent route per month with airports information (city, state)"
-print "------------------------------------------------------------------------------------------"
-
-a = datetime.datetime.now().replace(microsecond=0)
+print "------------------------------------------------"
 
 print graph.cypher.execute("""
 	MATCH ()-[n:MONTHLY_FLIGHTS]->()
@@ -46,13 +27,13 @@ print graph.cypher.execute("""
 	RETURN year, month, a.code AS origin, a.city AS origin_city, a.state AS origin_state, b.code AS dest, b.city AS dest_city, b.state AS dest_state, n.frequency AS frequency
 	""")
 
-b = datetime.datetime.now().replace(microsecond=0)
-print "Time to read: " + str(b-a) + "\n"
+c = datetime.datetime.now().replace(microsecond=0)
+print "Time to read: " + str(c-b) + "\n"
 
-# Query 2
-print "======================================================================="
-print "Query #2: Find the most frequent route per year (with only airport ID)"
-print "-----------------------------------------------------------------------"
+# Query 1.b
+print "================================================="
+print "Query #1.b: Find the most frequent route per year"
+print "-------------------------------------------------"
 a = datetime.datetime.now().replace(microsecond=0)
 graph.cypher.execute("""
 	MATCH (a:Airport)-[d:MONTHLY_FLIGHTS]->(b:Airport)
@@ -63,26 +44,7 @@ graph.cypher.execute("""
 
 b = datetime.datetime.now().replace(microsecond=0)
 print "Time to aggregate in yearly frequency: " + str(b-a)
-print "-----------------------------------------------------------------------"
-
-print graph.cypher.execute("""
-	MATCH ()-[n:YEARLY_FLIGHTS]->()
-	WITH n.year AS year, max(n.frequency) AS max_year_freq
-	MATCH (a:Airport)-[n:YEARLY_FLIGHTS]->(b:Airport)
-	WHERE n.frequency=max_year_freq
-	RETURN year, a.code AS origin, b.code AS dest, n.frequency AS frequency
-	""")
-
-c = datetime.datetime.now().replace(microsecond=0)
-print "Time to read: " + str(c-b) + "\n"
-
-
-# Query 2.b
-print "=========================================================================================="
-print "Query #2.b: Find the most frequent route per year with airports information (city, state)"
-print "------------------------------------------------------------------------------------------"
-
-a = datetime.datetime.now().replace(microsecond=0)
+print "-------------------------------------------------"
 
 print graph.cypher.execute("""
 	MATCH ()-[n:YEARLY_FLIGHTS]->()
@@ -92,13 +54,12 @@ print graph.cypher.execute("""
 	RETURN year, a.code AS origin, a.city AS origin_city, a.state AS origin_state, b.code AS dest, b.city AS dest_city, b.state AS dest_state, n.frequency AS frequency
 	""")
 
-b = datetime.datetime.now().replace(microsecond=0)
-print "Time to read: " + str(b-a) + "\n"
+c = datetime.datetime.now().replace(microsecond=0)
+print "Time to read: " + str(c-b) + "\n"
 
-
-# Query 3
+# Query 2
 print "==================================================================="
-print "Query #3: Find the airport with more flights (in and out) per month"
+print "Query #2: Find the airport with more flights (in and out) per month"
 print "-------------------------------------------------------------------"
 
 a = datetime.datetime.now().replace(microsecond=0)
@@ -114,10 +75,10 @@ b = datetime.datetime.now().replace(microsecond=0)
 print "Time: " + str(b-a) + "\n"
 
 
-# Query 4
-print "==================================================================="
-print "Query #4: Find the airport with more flights (in and out) per year"
-print "-------------------------------------------------------------------"
+# Query 2.b
+print "===================================================================="
+print "Query #2.b: Find the airport with more flights (in and out) per year"
+print "--------------------------------------------------------------------"
 
 a = datetime.datetime.now().replace(microsecond=0)
 
