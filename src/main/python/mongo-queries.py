@@ -4,13 +4,24 @@ from pymongo import MongoClient
 client = MongoClient()
 db = client.flights
 
+def runQueryAndGetTime(query, n=10):
+  totalTime = datetime.timedelta(0)
+  cursor = None
+
+  for i in range(n):
+    a = datetime.datetime.now()
+    cursor = db.routes.aggregate(query, allowDiskUse=True)
+    b = datetime.datetime.now()
+    totalTime += b-a
+
+  return (cursor, totalTime/n)
+
 # Query 1
 print "=================================================="
 print "Query #1: Find the most frequent route per month"
 print "--------------------------------------------------"
-a = datetime.datetime.now().replace(microsecond=0)
 
-cursor = db.routes.aggregate(
+(cursor, time) = runQueryAndGetTime(
   [
     {"$group": {
         "_id": {"year":"$year", "month":"$month", "origin":"$origin.code","destination":"$destination.code"},
@@ -32,24 +43,20 @@ cursor = db.routes.aggregate(
       }
     },
     { "$project": {"_id": 0, "year": 1, "month": 1 , "monthly_freq": 1, "origin": 1, "destination": 1 } }
-  ],
-  allowDiskUse=True
+  ]
 )
-
-b = datetime.datetime.now().replace(microsecond=0)
 
 for document in cursor:
   print(document)
 
-print "\nTime: " + str(b-a)
+print "\nTime: " + str(time)
 
 # Query 1.b
 print "================================================="
 print "Query #1.b: Find the most frequent route per year"
 print "-------------------------------------------------"
-a = datetime.datetime.now().replace(microsecond=0)
 
-cursor = db.routes.aggregate(
+(cursor, time) = runQueryAndGetTime(
   [
     { "$group": {
         "_id": {"year":"$year", "origin":"$origin.code","destination":"$destination.code"},
@@ -69,25 +76,21 @@ cursor = db.routes.aggregate(
       }
     },
     { "$project": {"_id": 0, "year": 1, "yearly_freq": 1, "origin": 1, "destination": 1 } }
-  ],
-  allowDiskUse=True
+  ]
 )
-
-b = datetime.datetime.now().replace(microsecond=0)
 
 for document in cursor:
   print(document)
 
-print "\nTime: " + str(b-a)
+print "\nTime: " + str(time)
 
 
 # Query 2
 print "==================================================================="
 print "Query #2: Find the airport with more flights (in and out) per month"
 print "-------------------------------------------------------------------"
-a = datetime.datetime.now().replace(microsecond=0)
 
-cursor = db.routes.aggregate(
+(cursor, time) = runQueryAndGetTime(
   [
     {
       "$group": {
@@ -148,25 +151,21 @@ cursor = db.routes.aggregate(
       }
     },
     { "$project": {"_id":0, "year": 1, "month": 1, "airport": 1, "monthly_freq_in_out": 1}}
-  ],
-  allowDiskUse=True
+  ]
 )
-
-b = datetime.datetime.now().replace(microsecond=0)
 
 for document in cursor:
   print(document)
 
-print "\nTime: " + str(b-a)
+print "\nTime: " + str(time)
 
 
 # Query 2.b
 print "===================================================================="
 print "Query #2.b: Find the airport with more flights (in and out) per year"
 print "--------------------------------------------------------------------"
-a = datetime.datetime.now().replace(microsecond=0)
 
-cursor = db.routes.aggregate(
+(cursor, time) = runQueryAndGetTime(
   [
     {
       "$group": {
@@ -220,24 +219,20 @@ cursor = db.routes.aggregate(
       }
     },
     { "$project": {"_id":0, "year": 1, "airport": 1, "yearly_freq_in_out": 1}}
-  ],
-  allowDiskUse=True
+  ]
 )
-
-b = datetime.datetime.now().replace(microsecond=0)
 
 for document in cursor:
   print(document)
 
-print "\nTime: " + str(b-a)
+print "\nTime: " + str(time)
 
 # Query 4
 print "==============================================================="
 print "Query #4: Find the state with more internal flights (per month)"
 print "---------------------------------------------------------------"
-a = datetime.datetime.now().replace(microsecond=0)
 
-cursor = db.routes.aggregate(
+(cursor, time) = runQueryAndGetTime(
   [ 
     {
       "$project": {
@@ -269,24 +264,20 @@ cursor = db.routes.aggregate(
       }
     },
     { "$project": {"_id":0, "year": 1, "month": 1, "monthly_freq": 1, "state": 1}}
-  ],
-  allowDiskUse=True
+  ]
 )
-
-b = datetime.datetime.now().replace(microsecond=0)
 
 for document in cursor:
   print(document)
 
-print "\nTime: " + str(b-a)
+print "\nTime: " + str(time)
 
 # Query 4.b
 print "================================================================"
 print "Query #4.b: Find the state with more internal flights (per year)"
 print "----------------------------------------------------------------"
-a = datetime.datetime.now().replace(microsecond=0)
 
-cursor = db.routes.aggregate(
+(cursor, time) = runQueryAndGetTime(
   [ 
     {
       "$project": {
@@ -315,24 +306,20 @@ cursor = db.routes.aggregate(
       }
     },
     { "$project": {"_id":0, "year": 1, "yearly_freq": 1, "state": 1}}
-  ],
-  allowDiskUse=True
+  ]
 )
-
-b = datetime.datetime.now().replace(microsecond=0)
 
 for document in cursor:
   print(document)
 
-print "\nTime: " + str(b-a)
+print "\nTime: " + str(time)
 
 # Query 5
 print "================================================================================="
 print "Query #5: Find the state with more departure flights to another state (per month)"
 print "---------------------------------------------------------------------------------"
-a = datetime.datetime.now().replace(microsecond=0)
 
-cursor = db.routes.aggregate(
+(cursor, time) = runQueryAndGetTime(
   [
     {
       "$project": {
@@ -364,24 +351,20 @@ cursor = db.routes.aggregate(
       }
     },
     { "$project": {"_id":0, "year": 1, "month": 1, "monthly_freq": 1, "state": 1}}
-  ],
-  allowDiskUse=True
+  ]
 )
-
-b = datetime.datetime.now().replace(microsecond=0)
 
 for document in cursor:
   print(document)
 
-print "\nTime: " + str(b-a)
+print "\nTime: " + str(time)
 
 # Query 5.b
 print "=================================================================================="
 print "Query #5.b: Find the state with more departure flights to another state (per year)"
 print "----------------------------------------------------------------------------------"
-a = datetime.datetime.now().replace(microsecond=0)
 
-cursor = db.routes.aggregate(
+(cursor, time) = runQueryAndGetTime(
   [
     {
       "$project": {
@@ -410,24 +393,20 @@ cursor = db.routes.aggregate(
       }
     },
     { "$project": {"_id":0, "year": 1, "yearly_freq": 1, "state": 1}}
-  ],
-  allowDiskUse=True
+  ]
 )
-
-b = datetime.datetime.now().replace(microsecond=0)
 
 for document in cursor:
   print(document)
 
-print "\nTime: " + str(b-a)
+print "\nTime: " + str(time)
 
 # Query 6
 print "================================================================================="
 print "Query #6: Find the state with more arrival flights from another state (per month)"
 print "---------------------------------------------------------------------------------"
-a = datetime.datetime.now().replace(microsecond=0)
 
-cursor = db.routes.aggregate(
+(cursor, time) = runQueryAndGetTime(
   [
     {
       "$project": {
@@ -459,24 +438,20 @@ cursor = db.routes.aggregate(
       }
     },
     { "$project": {"_id":0, "year": 1, "month": 1, "monthly_freq": 1, "state": 1}}
-  ],
-  allowDiskUse=True
+  ]
 )
-
-b = datetime.datetime.now().replace(microsecond=0)
 
 for document in cursor:
   print(document)
 
-print "\nTime: " + str(b-a)
+print "\nTime: " + str(time)
 
 # Query 6.b
 print "=================================================================================="
 print "Query #6.b: Find the state with more arrival flights from another state (per year)"
 print "----------------------------------------------------------------------------------"
-a = datetime.datetime.now().replace(microsecond=0)
 
-cursor = db.routes.aggregate(
+(cursor, time) = runQueryAndGetTime(
   [
     {
       "$project": {
@@ -505,13 +480,10 @@ cursor = db.routes.aggregate(
       }
     },
     { "$project": {"_id":0, "year": 1, "yearly_freq": 1, "state": 1}}
-  ],
-  allowDiskUse=True
+  ]
 )
-
-b = datetime.datetime.now().replace(microsecond=0)
 
 for document in cursor:
   print(document)
 
-print "\nTime: " + str(b-a)
+print "\nTime: " + str(time)

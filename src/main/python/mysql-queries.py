@@ -31,10 +31,23 @@ def connectToMysql():
 conn = connectToMysql()
 query = conn.cursor()
 
+
+def runQueryAndGetTime(sql, n=10):
+  totalTime = datetime.timedelta(0)
+  results = None
+
+  for i in range(n):
+    a = datetime.datetime.now()
+    query.execute(sql)
+    results = query.fetchall()
+    b = datetime.datetime.now()
+    totalTime += b-a
+
+  return (results, totalTime/n)
+
 # Query 1
 print "================================================"
 print "Query #1: Find the most frequent route per month"
-a = datetime.datetime.now().replace(microsecond=0)
 
 sql = """
 	SELECT r2.year, r2.month, r2.origin, a1.city AS origin_city, a1.state  AS origin_state, r2.destination, a2.city AS destination_city, a2.state  AS destination_state, max(r2.monthly_freq) AS max_monthly_freq
@@ -48,19 +61,17 @@ sql = """
 		ON r2.destination = a2.code
 	GROUP BY r2.year, r2.month;
 	"""
-query.execute(sql)
-b = datetime.datetime.now().replace(microsecond=0)
+(results, time) = runQueryAndGetTime(sql)
 
 table = PrettyTable(["year", "month", "origin", "origin_city", "origin_state", "destination", "destination_city", "destination_state", "max_monthly_freq"])
-for row in query.fetchall():
+for row in results:
 	table.add_row(row)
 print table
-print "Time: " + str(b-a) + "\n"
+print "Time: " + str(time) + "\n"
 
 # Query 1.b
 print "================================================="
 print "Query #1.b: Find the most frequent route per year"
-a = datetime.datetime.now().replace(microsecond=0)
 
 sql = """
 	SELECT r2.year, r2.origin, a1.city AS origin_city, a1.state  AS origin_state, r2.destination, a2.city AS destnation_city, a2.state  AS destnation_state, max(r2.yearly_freq) AS max_yearly_freq
@@ -74,20 +85,18 @@ sql = """
 		ON r2.destination = a2.code
 	GROUP BY r2.year;
 	"""
-query.execute(sql)
-b = datetime.datetime.now().replace(microsecond=0)
+(results, time) = runQueryAndGetTime(sql)
 
 table = PrettyTable(["year", "origin", "origin_city", "origin_state", "destination", "destination_city", "destination_state", "max_yearly_freq"])
-for row in query.fetchall():
+for row in results:
 	table.add_row(row)
 print table
-print "Time: " + str(b-a) + "\n"
+print "Time: " + str(time) + "\n"
 
 
 # Query 2
 print "======================================================================="
 print "Query #2: Find the airport with more flights (in and out) per month"
-a = datetime.datetime.now().replace(microsecond=0)
 
 sql = """
 	SELECT year, month, airport, max(flights) AS tot_flights
@@ -107,19 +116,17 @@ sql = """
 		ORDER BY sum(monthly_freq) DESC) as m
 	GROUP BY year, month;
 	"""
-query.execute(sql)
-b = datetime.datetime.now().replace(microsecond=0)
+(results, time) = runQueryAndGetTime(sql)
 
 table = PrettyTable(["year", "month", "airport", "tot_flights"])
-for row in query.fetchall():
+for row in results:
 	table.add_row(row)
 print table
-print "Time: " + str(b-a) + "\n"
+print "Time: " + str(time) + "\n"
 
 # Query 2.b
 print "======================================================================="
 print "Query #2.b: Find the airport with more flights (in and out) per year"
-a = datetime.datetime.now().replace(microsecond=0)
 
 sql = """
 	SELECT year, airport, max(flights) AS tot_flights
@@ -139,20 +146,18 @@ sql = """
 		ORDER BY sum(yearly_freq) DESC) as m
 	GROUP BY year;
 	"""
-query.execute(sql)
-b = datetime.datetime.now().replace(microsecond=0)
+(results, time) = runQueryAndGetTime(sql)
 
 table = PrettyTable(["year", "airport", "tot_flights"])
-for row in query.fetchall():
+for row in results:
 	table.add_row(row)
 print table
-print "Time: " + str(b-a) + "\n"
+print "Time: " + str(time) + "\n"
 
 
 # Query 4
 print "==============================================================="
 print "Query #4: Find the state with more internal flights (per month)"
-a = datetime.datetime.now().replace(microsecond=0)
 
 sql = """
 	SELECT r1.year, r1.month, r1.state, max(r1.monthly_freq) as monthly_freq
@@ -166,20 +171,18 @@ sql = """
 		ORDER BY sum(r.frequency) DESC ) as r1
 	GROUP BY r1.year, r1.month;
 	"""
-query.execute(sql)
-b = datetime.datetime.now().replace(microsecond=0)
+(results, time) = runQueryAndGetTime(sql)
 
 table = PrettyTable(["year", "month", "state", "monthly_freq"])
-for row in query.fetchall():
+for row in results:
 	table.add_row(row)
 print table
-print "Time: " + str(b-a) + "\n"
+print "Time: " + str(time) + "\n"
 
 
 # Query 4.b
 print "================================================================"
 print "Query #4.b: Find the state with more internal flights (per year)"
-a = datetime.datetime.now().replace(microsecond=0)
 
 sql = """
 	SELECT r1.year, r1.state, max(r1.yearly_freq) as yearly_freq
@@ -193,20 +196,18 @@ sql = """
 		ORDER BY sum(r.frequency) DESC ) as r1
 	GROUP BY r1.year;
 	"""
-query.execute(sql)
-b = datetime.datetime.now().replace(microsecond=0)
+(results, time) = runQueryAndGetTime(sql)
 
 table = PrettyTable(["year", "state", "yearly_freq"])
-for row in query.fetchall():
+for row in results:
 	table.add_row(row)
 print table
-print "Time: " + str(b-a) + "\n"
+print "Time: " + str(time) + "\n"
 
 
 # Query 5
 print "================================================================================="
 print "Query #5: Find the state with more departure flights to another state (per month)"
-a = datetime.datetime.now().replace(microsecond=0)
 
 sql = """
 	SELECT r1.year, r1.month, r1.state, max(r1.monthly_freq) as monthly_freq
@@ -220,20 +221,18 @@ sql = """
 		ORDER BY sum(r.frequency) DESC ) as r1
 	GROUP BY r1.year, r1.month;
 	"""
-query.execute(sql)
-b = datetime.datetime.now().replace(microsecond=0)
+(results, time) = runQueryAndGetTime(sql)
 
 table = PrettyTable(["year", "month", "state", "monthly_freq"])
-for row in query.fetchall():
+for row in results:
 	table.add_row(row)
 print table
-print "Time: " + str(b-a) + "\n"
+print "Time: " + str(time) + "\n"
 
 
 # Query 5.b
 print "==================================================================================="
 print "Query #5.b: Find the state with more departure flights to another state  (per year)"
-a = datetime.datetime.now().replace(microsecond=0)
 
 sql = """
 	SELECT r1.year, r1.state, max(r1.yearly_freq) as yearly_freq
@@ -247,20 +246,18 @@ sql = """
 		ORDER BY sum(r.frequency) DESC ) as r1
 	GROUP BY r1.year;
 	"""
-query.execute(sql)
-b = datetime.datetime.now().replace(microsecond=0)
+(results, time) = runQueryAndGetTime(sql)
 
 table = PrettyTable(["year", "state", "yearly_freq"])
-for row in query.fetchall():
+for row in results:
 	table.add_row(row)
 print table
-print "Time: " + str(b-a) + "\n"
+print "Time: " + str(time) + "\n"
 
 
 # Query 6
 print "================================================================================="
 print "Query #6: Find the state with more arrival flights from another state (per month)"
-a = datetime.datetime.now().replace(microsecond=0)
 
 sql = """
 	SELECT r1.year, r1.month, r1.state, max(r1.monthly_freq) as monthly_freq
@@ -274,19 +271,17 @@ sql = """
 		ORDER BY sum(r.frequency) DESC ) as r1
 	GROUP BY r1.year, r1.month;
 	"""
-query.execute(sql)
-b = datetime.datetime.now().replace(microsecond=0)
+(results, time) = runQueryAndGetTime(sql)
 
 table = PrettyTable(["year", "month", "state", "monthly_freq"])
-for row in query.fetchall():
+for row in results:
 	table.add_row(row)
 print table
-print "Time: " + str(b-a) + "\n"
+print "Time: " + str(time) + "\n"
 
 # Query 6.b
 print "=================================================================================="
 print "Query #6.b: Find the state with more arrival flights from another state (per year)"
-a = datetime.datetime.now().replace(microsecond=0)
 
 sql = """
 	SELECT r1.year, r1.state, max(r1.yearly_freq) as yearly_freq
@@ -300,12 +295,11 @@ sql = """
 		ORDER BY sum(r.frequency) DESC ) as r1
 	GROUP BY r1.year;
 	"""
-query.execute(sql)
-b = datetime.datetime.now().replace(microsecond=0)
+(results, time) = runQueryAndGetTime(sql)
 
 table = PrettyTable(["year", "state", "yearly_freq"])
-for row in query.fetchall():
+for row in results:
 	table.add_row(row)
 print table
-print "Time: " + str(b-a) + "\n"
+print "Time: " + str(time) + "\n"
 
