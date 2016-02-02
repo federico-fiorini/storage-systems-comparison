@@ -7,21 +7,23 @@ db = client.flights
 def runQueryAndGetTime(query, n=10):
   totalTime = datetime.timedelta(0)
   cursor = None
+  times = []
 
   for i in range(n):
     a = datetime.datetime.now()
     cursor = db.routes.aggregate(query, allowDiskUse=True)
     b = datetime.datetime.now()
     totalTime += b-a
+    times.append(b-a)
 
-  return (cursor, totalTime/n)
+  return (cursor, times, totalTime/n)
 
 # Query 1
 print "=================================================="
 print "Query #1: Find the most frequent route per month"
 print "--------------------------------------------------"
 
-(cursor, time) = runQueryAndGetTime(
+(cursor, timeList, time) = runQueryAndGetTime(
   [
     {"$group": {
         "_id": {"year":"$year", "month":"$month", "origin":"$origin.code","destination":"$destination.code"},
@@ -49,6 +51,7 @@ print "--------------------------------------------------"
 for document in cursor:
   print(document)
 
+print map(str, timeList)
 print "\nTime: " + str(time)
 
 # Query 1.b
@@ -56,7 +59,7 @@ print "================================================="
 print "Query #1.b: Find the most frequent route per year"
 print "-------------------------------------------------"
 
-(cursor, time) = runQueryAndGetTime(
+(cursor, timeList, time) = runQueryAndGetTime(
   [
     { "$group": {
         "_id": {"year":"$year", "origin":"$origin.code","destination":"$destination.code"},
@@ -82,6 +85,7 @@ print "-------------------------------------------------"
 for document in cursor:
   print(document)
 
+print map(str, timeList)
 print "\nTime: " + str(time)
 
 
@@ -90,7 +94,7 @@ print "==================================================================="
 print "Query #2: Find the airport with more flights (in and out) per month"
 print "-------------------------------------------------------------------"
 
-(cursor, time) = runQueryAndGetTime(
+(cursor, timeList, time) = runQueryAndGetTime(
   [
     {
       "$group": {
@@ -157,6 +161,7 @@ print "-------------------------------------------------------------------"
 for document in cursor:
   print(document)
 
+print map(str, timeList)
 print "\nTime: " + str(time)
 
 
@@ -165,7 +170,7 @@ print "===================================================================="
 print "Query #2.b: Find the airport with more flights (in and out) per year"
 print "--------------------------------------------------------------------"
 
-(cursor, time) = runQueryAndGetTime(
+(cursor, timeList, time) = runQueryAndGetTime(
   [
     {
       "$group": {
@@ -225,6 +230,7 @@ print "--------------------------------------------------------------------"
 for document in cursor:
   print(document)
 
+print map(str, timeList)
 print "\nTime: " + str(time)
 
 # Query 4
@@ -232,7 +238,7 @@ print "==============================================================="
 print "Query #4: Find the state with more internal flights (per month)"
 print "---------------------------------------------------------------"
 
-(cursor, time) = runQueryAndGetTime(
+(cursor, timeList, time) = runQueryAndGetTime(
   [ 
     {
       "$project": {
@@ -270,6 +276,7 @@ print "---------------------------------------------------------------"
 for document in cursor:
   print(document)
 
+print map(str, timeList)
 print "\nTime: " + str(time)
 
 # Query 4.b
@@ -277,7 +284,7 @@ print "================================================================"
 print "Query #4.b: Find the state with more internal flights (per year)"
 print "----------------------------------------------------------------"
 
-(cursor, time) = runQueryAndGetTime(
+(cursor, timeList, time) = runQueryAndGetTime(
   [ 
     {
       "$project": {
@@ -312,6 +319,7 @@ print "----------------------------------------------------------------"
 for document in cursor:
   print(document)
 
+print map(str, timeList)
 print "\nTime: " + str(time)
 
 # Query 5
@@ -319,7 +327,7 @@ print "=========================================================================
 print "Query #5: Find the state with more departure flights to another state (per month)"
 print "---------------------------------------------------------------------------------"
 
-(cursor, time) = runQueryAndGetTime(
+(cursor, timeList, time) = runQueryAndGetTime(
   [
     {
       "$project": {
@@ -357,6 +365,7 @@ print "-------------------------------------------------------------------------
 for document in cursor:
   print(document)
 
+print map(str, timeList)
 print "\nTime: " + str(time)
 
 # Query 5.b
@@ -364,7 +373,7 @@ print "=========================================================================
 print "Query #5.b: Find the state with more departure flights to another state (per year)"
 print "----------------------------------------------------------------------------------"
 
-(cursor, time) = runQueryAndGetTime(
+(cursor, timeList, time) = runQueryAndGetTime(
   [
     {
       "$project": {
@@ -399,6 +408,7 @@ print "-------------------------------------------------------------------------
 for document in cursor:
   print(document)
 
+print map(str, timeList)
 print "\nTime: " + str(time)
 
 # Query 6
@@ -406,7 +416,7 @@ print "=========================================================================
 print "Query #6: Find the state with more arrival flights from another state (per month)"
 print "---------------------------------------------------------------------------------"
 
-(cursor, time) = runQueryAndGetTime(
+(cursor, timeList, time) = runQueryAndGetTime(
   [
     {
       "$project": {
@@ -444,6 +454,7 @@ print "-------------------------------------------------------------------------
 for document in cursor:
   print(document)
 
+print map(str, timeList)
 print "\nTime: " + str(time)
 
 # Query 6.b
@@ -451,7 +462,7 @@ print "=========================================================================
 print "Query #6.b: Find the state with more arrival flights from another state (per year)"
 print "----------------------------------------------------------------------------------"
 
-(cursor, time) = runQueryAndGetTime(
+(cursor, timeList, time) = runQueryAndGetTime(
   [
     {
       "$project": {
@@ -486,4 +497,5 @@ print "-------------------------------------------------------------------------
 for document in cursor:
   print(document)
 
+print map(str, timeList)
 print "\nTime: " + str(time)
