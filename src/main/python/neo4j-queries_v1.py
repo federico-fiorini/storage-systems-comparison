@@ -1,19 +1,23 @@
 import datetime
 from py2neo import Graph, Node, Relationship
+from py2neo.packages.httpstream import http
+http.socket_timeout = 9999
 
 graph = Graph()
 
 def runQueryAndGetTime(query, n=10):
   totalTime = datetime.timedelta(0)
   results = None
+  times = []
 
   for i in range(n):
     a = datetime.datetime.now()
     results = graph.cypher.execute(query)
     b = datetime.datetime.now()
     totalTime += b-a
+    times.append(b-a)
 
-  return (results, totalTime/n)
+  return (results, times, totalTime/n)
 
 print "================================================"
 print "Version 1: run all queries using daily frequency"
@@ -23,7 +27,7 @@ print "================================================"
 print "Query #1: Find the most frequent route per month"
 print "------------------------------------------------"
 
-(results, time) = runQueryAndGetTime("""
+(results, timeList, time) = runQueryAndGetTime("""
 	MATCH (a:Airport)-[n:DAILY_FLIGHTS]->(b:Airport)
 	WITH a, b, n.year AS year, n.month AS month, sum(toInt(n.frequency)) AS monthly_freq
 	ORDER BY monthly_freq DESC
@@ -32,6 +36,7 @@ print "------------------------------------------------"
 	""")
 
 print results
+print map(str, timeList)
 print "Time: " + str(time) + "\n"
 
 # Query 1.b
@@ -39,7 +44,7 @@ print "================================================="
 print "Query #1.b: Find the most frequent route per year"
 print "-------------------------------------------------"
 
-(results, time) = runQueryAndGetTime("""
+(results, timeList, time) = runQueryAndGetTime("""
 	MATCH (a:Airport)-[n:DAILY_FLIGHTS]->(b:Airport)
 	WITH a, b, n.year AS year, sum(toInt(n.frequency)) AS yearly_freq
 	ORDER BY yearly_freq DESC
@@ -48,6 +53,7 @@ print "-------------------------------------------------"
 	""")
 
 print results
+print map(str, timeList)
 print "Time: " + str(time) + "\n"
 
 # Query 2
@@ -55,7 +61,7 @@ print "==================================================================="
 print "Query #2: Find the airport with more flights (in and out) per month"
 print "-------------------------------------------------------------------"
 
-(results, time) = runQueryAndGetTime("""
+(results, timeList, time) = runQueryAndGetTime("""
 	MATCH (a:Airport)-[n:DAILY_FLIGHTS]-()
 	WITH a.code AS code, n.year AS year, n.month AS month, sum(toInt(n.frequency)) AS flights
 	ORDER BY flights DESC
@@ -63,6 +69,7 @@ print "-------------------------------------------------------------------"
 	""")
 
 print results
+print map(str, timeList)
 print "Time: " + str(time) + "\n"
 
 
@@ -71,7 +78,7 @@ print "===================================================================="
 print "Query #2.b: Find the airport with more flights (in and out) per year"
 print "--------------------------------------------------------------------"
 
-(results, time) = runQueryAndGetTime("""
+(results, timeList, time) = runQueryAndGetTime("""
 	MATCH (a:Airport)-[n:DAILY_FLIGHTS]-()
 	WITH a.code AS code, n.year AS year, sum(toInt(n.frequency)) AS flights
 	ORDER BY flights DESC
@@ -79,6 +86,7 @@ print "--------------------------------------------------------------------"
 	""")
 
 print results
+print map(str, timeList)
 print "Time: " + str(time) + "\n"
 
 
@@ -97,13 +105,14 @@ print "Route: %s -> %s" % (departure, arrival)
 print "Departure: %s/%s/%s" % (day, month, year)
 print "----------------------------------------------------------------------------------------"
 
-(results, time) = runQueryAndGetTime("""
+(results, timeList, time) = runQueryAndGetTime("""
 	MATCH p = allShortestPaths((a:Airport { code:"%s"})-[:DAILY_FLIGHTS*..10]->(b:Airport { code:"%s"}))
 	WHERE ALL(r in rels(p) WHERE r.year="%s" AND r.month="%s" AND r.day="%s")
 	RETURN p AS shortest_path
 	""" % (departure, arrival, year, month, day))
 
 print results
+print map(str, timeList)
 print "Time: " + str(time) + "\n"
 
 # Query 3.b
@@ -115,7 +124,7 @@ print "Route: %s -> %s" % (departure, arrival)
 print "Departure: %s/%s/%s" % (day, month, year)
 print "----------------------------------------------------------------------------------------"
 
-(results, time) = runQueryAndGetTime("""
+(results, timeList, time) = runQueryAndGetTime("""
 	MATCH ()-[n:DAILY_FLIGHTS { year:"%s", month:"%s", day:"%s"}]-()
 	WITH avg(toInt(n.frequency)) as freq_avg
 	MATCH p = allShortestPaths((a:Airport { code:"%s"})-[:DAILY_FLIGHTS*..10]->(b:Airport { code:"%s"}))
@@ -124,6 +133,7 @@ print "-------------------------------------------------------------------------
 	""" % (year, month, day, departure, arrival, year, month, day))
 
 print results
+print map(str, timeList)
 print "Time: " + str(time) + "\n"
 
 # Query 4
@@ -131,7 +141,7 @@ print "==============================================================="
 print "Query #4: Find the state with more internal flights (per month)"
 print "---------------------------------------------------------------"
 
-(results, time) = runQueryAndGetTime("""
+(results, timeList, time) = runQueryAndGetTime("""
 	MATCH (a:Airport)-[n:DAILY_FLIGHTS]->(b:Airport)
 	WHERE a.state = b.state
 	WITH n.year AS year, n.month AS month, a.state AS state, sum(toInt(n.frequency)) AS flights
@@ -140,6 +150,7 @@ print "---------------------------------------------------------------"
 	""")
 
 print results
+print map(str, timeList)
 print "Time: " + str(time) + "\n"
 
 
@@ -148,7 +159,7 @@ print "================================================================"
 print "Query #4.b: Find the state with more internal flights (per year)"
 print "----------------------------------------------------------------"
 
-(results, time) = runQueryAndGetTime("""
+(results, timeList, time) = runQueryAndGetTime("""
 	MATCH (a:Airport)-[n:DAILY_FLIGHTS]->(b:Airport)
 	WHERE a.state = b.state
 	WITH n.year AS year, a.state AS state, sum(toInt(n.frequency)) AS flights
@@ -157,6 +168,7 @@ print "----------------------------------------------------------------"
 	""")
 
 print results
+print map(str, timeList)
 print "Time: " + str(time) + "\n"
 
 
@@ -165,7 +177,7 @@ print "=========================================================================
 print "Query #5: Find the state with more external departure flights (per month)"
 print "-------------------------------------------------------------------------"
 
-(results, time) = runQueryAndGetTime("""
+(results, timeList, time) = runQueryAndGetTime("""
 	MATCH (a:Airport)-[n:DAILY_FLIGHTS]->(b:Airport)
 	WHERE a.state <> b.state
 	WITH n.year AS year, n.month AS month, a.state AS state, sum(toInt(n.frequency)) AS flights
@@ -174,6 +186,7 @@ print "-------------------------------------------------------------------------
 	""")
 
 print results
+print map(str, timeList)
 print "Time: " + str(time) + "\n"
 
 
@@ -182,7 +195,7 @@ print "=========================================================================
 print "Query #5.b: Find the state with more external departure flights (per year)"
 print "--------------------------------------------------------------------------"
 
-(results, time) = runQueryAndGetTime("""
+(results, timeList, time) = runQueryAndGetTime("""
 	MATCH (a:Airport)-[n:DAILY_FLIGHTS]->(b:Airport)
 	WHERE a.state <> b.state
 	WITH n.year AS year, a.state AS state, sum(toInt(n.frequency)) AS flights
@@ -191,6 +204,7 @@ print "-------------------------------------------------------------------------
 	""")
 
 print results
+print map(str, timeList)
 print "Time: " + str(time) + "\n"
 
 
@@ -199,7 +213,7 @@ print "======================================================================="
 print "Query #6: Find the state with more external arrival flights (per month)"
 print "-----------------------------------------------------------------------"
 
-(results, time) = runQueryAndGetTime("""
+(results, timeList, time) = runQueryAndGetTime("""
 	MATCH (a:Airport)<-[n:DAILY_FLIGHTS]-(b:Airport)
 	WHERE a.state <> b.state
 	WITH n.year AS year, n.month AS month, a.state AS state, sum(toInt(n.frequency)) AS flights
@@ -208,6 +222,7 @@ print "-----------------------------------------------------------------------"
 	""")
 
 print results
+print map(str, timeList)
 print "Time: " + str(time) + "\n"
 
 
@@ -216,7 +231,7 @@ print "========================================================================"
 print "Query #6.b: Find the state with more external arrival flights (per year)"
 print "------------------------------------------------------------------------"
 
-(results, time) = runQueryAndGetTime("""
+(results, timeList, time) = runQueryAndGetTime("""
 	MATCH (a:Airport)<-[n:DAILY_FLIGHTS]-(b:Airport)
 	WHERE a.state <> b.state
 	WITH n.year AS year, a.state AS state, sum(toInt(n.frequency)) AS flights
@@ -225,6 +240,7 @@ print "------------------------------------------------------------------------"
 	""")
 
 print results
+print map(str, timeList)
 print "Time: " + str(time) + "\n"
 
 
