@@ -45,6 +45,177 @@ def runQueryAndGetTime(sql, n=10):
 
   return (results, totalTime/n)
 
+def runIsolated(sql):
+	cursor = conn.cursor()
+	cursor.execute(sql)
+	result = cursor.fetchall()
+	cursor.close()
+
+	return result
+
+def initDBforDijkstra():
+	sql = "DROP TABLE IF EXISTS dijnodes,dijpaths;"
+	runIsolated(sql)
+
+	sql = """ 
+		CREATE TABLE dijnodes ( 
+		  nodeID int PRIMARY KEY AUTO_INCREMENT NOT NULL, 
+		  nodename varchar (20) NOT NULL, 
+		  cost int NULL, 
+		  pathID int NULL, 
+		  calculated tinyint NOT NULL  
+		); 
+		"""
+	runIsolated(sql)
+
+	sql = """
+		CREATE TABLE dijpaths ( 
+		  pathID int PRIMARY KEY AUTO_INCREMENT, 
+		  fromNodeID int NOT NULL , 
+		  toNodeID int NOT NULL , 
+		  cost int NOT NULL 
+		); 
+		"""
+	runIsolated(sql)
+
+	sql = "DROP PROCEDURE IF EXISTS dijAddPath;"
+	runIsolated(sql)
+
+	sql = """ 
+		CREATE PROCEDURE dijAddPath(
+			pFromNodeName VARCHAR(20), pToNodeName VARCHAR(20), pCost INT
+		)
+		BEGIN 
+		  DECLARE vFromNodeID, vToNodeID, vPathID INT; 
+		  SET vFromNodeID = ( SELECT NodeID FROM dijnodes WHERE NodeName = pFromNodeName ); 
+		  IF vFromNodeID IS NULL THEN 
+		    BEGIN 
+		      INSERT INTO dijnodes (NodeName,Calculated) VALUES (pFromNodeName,0); 
+		      SET vFromNodeID = LAST_INSERT_ID(); 
+		    END; 
+		  END IF; 
+		  SET vToNodeID = ( SELECT NodeID FROM dijnodes WHERE NodeName = pToNodeName ); 
+		  IF vToNodeID IS NULL THEN 
+		    BEGIN 
+		      INSERT INTO dijnodes(NodeName, Calculated)  
+		      VALUES(pToNodeName,0); 
+		      SET vToNodeID = LAST_INSERT_ID(); 
+		    END; 
+		  END IF; 
+		  SET vPathID = ( SELECT PathID FROM dijpaths  
+		                  WHERE FromNodeID = vFromNodeID AND ToNodeID = vToNodeID  
+		                ); 
+		  IF vPathID IS NULL THEN 
+		    INSERT INTO dijpaths(FromNodeID,ToNodeID,Cost)  
+		    VALUES(vFromNodeID,vToNodeID,pCost); 
+		  ELSE 
+		    UPDATE dijpaths SET Cost = pCost   
+		    WHERE FromNodeID = vFromNodeID AND ToNodeID = vToNodeID; 
+		  END IF; 
+		END;  
+		"""
+	runIsolated(sql)
+
+def createDijkstraProcedure():
+	sql = "DROP PROCEDURE IF EXISTS dijResolve;"
+	runIsolated(sql)
+
+	sql = """
+		CREATE PROCEDURE dijResolve( pFromNodeName VARCHAR(20), pToNodeName VARCHAR(20) )
+		BEGIN
+		  DECLARE vFromNodeID, vToNodeID, vNodeID, vCost, vPathID INT; 
+		  DECLARE vFromNodeName, vToNodeName VARCHAR(20); 
+		  -- null out path info in the nodes table 
+		  UPDATE dijnodes SET PathID = NULL,Cost = NULL,Calculated = 0; 
+		  -- find nodeIDs referenced by input params 
+		  SET vFromNodeID = ( SELECT NodeID FROM dijnodes WHERE NodeName = pFromNodeName ); 
+		  IF vFromNodeID IS NULL THEN 
+		    SELECT CONCAT('From node name ', pFromNodeName, ' not found.' );  
+		  ELSE 
+		    BEGIN 
+		      -- start at src node 
+		      SET vNodeID = vFromNodeID; 
+		      SET vToNodeID = ( SELECT NodeID FROM dijnodes WHERE NodeName = pToNodeName ); 
+		      IF vToNodeID IS NULL THEN 
+		        SELECT CONCAT('From node name ', pToNodeName, ' not found.' ); 
+		      ELSE 
+		        BEGIN 
+		          -- calculate path costs till all are done 
+		          UPDATE dijnodes SET Cost=0 WHERE NodeID = vFromNodeID; 
+		          WHILE vNodeID IS NOT NULL DO 
+		            BEGIN 
+		              UPDATE  
+		                dijnodes AS src 
+		                JOIN dijpaths AS paths ON paths.FromNodeID = src.NodeID 
+		                JOIN dijnodes AS dest ON dest.NodeID = Paths.ToNodeID 
+		              SET dest.Cost = CASE 
+		                                WHEN dest.Cost IS NULL THEN src.Cost + Paths.Cost 
+		                                WHEN src.Cost + Paths.Cost < dest.Cost THEN src.Cost + Paths.Cost 
+		                                ELSE dest.Cost 
+		                              END, 
+		                  dest.PathID = Paths.PathID 
+		              WHERE  
+		                src.NodeID = vNodeID 
+		                AND (dest.Cost IS NULL OR src.Cost + Paths.Cost < dest.Cost) 
+		                AND dest.Calculated = 0; 
+		        
+		              UPDATE dijnodes SET Calculated = 1 WHERE NodeID = vNodeID; 
+
+		              SET vNodeID = ( SELECT nodeID FROM dijnodes 
+		                              WHERE Calculated = 0 AND Cost IS NOT NULL 
+		                              ORDER BY Cost LIMIT 1 
+		                            ); 
+		            END; 
+		          END WHILE; 
+		        END; 
+		      END IF; 
+		    END; 
+		  END IF; 
+		  IF EXISTS( SELECT 1 FROM dijnodes WHERE NodeID = vToNodeID AND Cost IS NULL ) THEN 
+		    -- problem,  cannot proceed 
+		    SELECT CONCAT( 'Node ',vNodeID, ' missed.' ); 
+		  ELSE 
+		    BEGIN 
+		      -- write itinerary to map table 
+		      DROP TEMPORARY TABLE IF EXISTS map; 
+		      CREATE TEMPORARY TABLE map ( 
+		        RowID INT PRIMARY KEY AUTO_INCREMENT, 
+		        FromNodeName VARCHAR(20), 
+		        ToNodeName VARCHAR(20), 
+		        Cost INT 
+		      ) ENGINE=MEMORY; 
+		      WHILE vFromNodeID <> vToNodeID DO 
+		        BEGIN 
+		          SELECT  
+		            src.NodeName,dest.NodeName,dest.Cost,dest.PathID 
+		            INTO vFromNodeName, vToNodeName, vCost, vPathID 
+		          FROM  
+		            dijnodes AS dest 
+		            JOIN dijpaths AS Paths ON Paths.PathID = dest.PathID 
+		            JOIN dijnodes AS src ON src.NodeID = Paths.FromNodeID 
+		          WHERE dest.NodeID = vToNodeID; 
+		           
+		          INSERT INTO Map(FromNodeName,ToNodeName,Cost) VALUES(vFromNodeName,vToNodeName,vCost); 
+		           
+		          SET vToNodeID = (SELECT FromNodeID FROM dijPaths WHERE PathID = vPathID); 
+		        END; 
+		      END WHILE; 
+		      SELECT FromNodeName,ToNodeName,Cost FROM Map ORDER BY RowID DESC; 
+		      DROP TEMPORARY TABLE Map; 
+		    END; 
+		  END IF; 
+		END; 
+		"""
+	runIsolated(sql)
+
+def dropDijkstra():
+	sql = "DROP TABLE IF EXISTS dijnodes,dijpaths;"
+	runIsolated(sql)
+	sql = "DROP PROCEDURE IF EXISTS dijAddPath; "
+	runIsolated(sql)
+	sql = "DROP PROCEDURE IF EXISTS dijResolve;"
+	runIsolated(sql)
+
 # Query 1
 print "================================================"
 print "Query #1: Find the most frequent route per month"
@@ -153,7 +324,7 @@ for row in results:
 	table.add_row(row)
 print table
 print "Time: " + str(time) + "\n"
-query.close()
+
 
 # Query 3
 print "========================================================================================"
@@ -170,65 +341,8 @@ print "Route: %s -> %s" % (departure, arrival)
 print "Departure: %s/%s/%s" % (day, month, year)
 
 a = datetime.datetime.now()
-sql = """
-	DROP TABLE IF EXISTS dijnodes,dijpaths; 
-	CREATE TABLE dijnodes ( 
-	  nodeID int PRIMARY KEY AUTO_INCREMENT NOT NULL, 
-	  nodename varchar (20) NOT NULL, 
-	  cost int NULL, 
-	  pathID int NULL, 
-	  calculated tinyint NOT NULL  
-	); 
 
-	CREATE TABLE dijpaths ( 
-	  pathID int PRIMARY KEY AUTO_INCREMENT, 
-	  fromNodeID int NOT NULL , 
-	  toNodeID int NOT NULL , 
-	  cost int NOT NULL 
-	); 
-	"""
-query.execute(sql)
-query.fetchall()
-query.close()
-
-sql = """
-	DROP PROCEDURE IF EXISTS dijAddPath; 
-	CREATE PROCEDURE dijAddPath(
-		pFromNodeName VARCHAR(20), pToNodeName VARCHAR(20), pCost INT
-	)
-	BEGIN 
-	  DECLARE vFromNodeID, vToNodeID, vPathID INT; 
-	  SET vFromNodeID = ( SELECT NodeID FROM dijnodes WHERE NodeName = pFromNodeName ); 
-	  IF vFromNodeID IS NULL THEN 
-	    BEGIN 
-	      INSERT INTO dijnodes (NodeName,Calculated) VALUES (pFromNodeName,0); 
-	      SET vFromNodeID = LAST_INSERT_ID(); 
-	    END; 
-	  END IF; 
-	  SET vToNodeID = ( SELECT NodeID FROM dijnodes WHERE NodeName = pToNodeName ); 
-	  IF vToNodeID IS NULL THEN 
-	    BEGIN 
-	      INSERT INTO dijnodes(NodeName, Calculated)  
-	      VALUES(pToNodeName,0); 
-	      SET vToNodeID = LAST_INSERT_ID(); 
-	    END; 
-	  END IF; 
-	  SET vPathID = ( SELECT PathID FROM dijpaths  
-	                  WHERE FromNodeID = vFromNodeID AND ToNodeID = vToNodeID  
-	                ); 
-	  IF vPathID IS NULL THEN 
-	    INSERT INTO dijpaths(FromNodeID,ToNodeID,Cost)  
-	    VALUES(vFromNodeID,vToNodeID,pCost); 
-	  ELSE 
-	    UPDATE dijpaths SET Cost = pCost   
-	    WHERE FromNodeID = vFromNodeID AND ToNodeID = vToNodeID; 
-	  END IF; 
-	END;  
-	"""
-query = conn.cursor()
-query.execute(sql)
-query.fetchall()
-query.close()
+initDBforDijkstra()
 
 sql = """
 	SELECT r.origin, r.destination
@@ -236,128 +350,76 @@ sql = """
 	WHERE r.year = "%s" AND r.month = "%s" AND r.day = "%s";
 	""" % (year, month, day)
 
-query = conn.cursor()
-query.execute(sql)
-for route in query.fetchall():
+results = runIsolated(sql)
+for route in results:
 	sql = "call dijaddpath('%s', '%s',  1);" % (route[0], route[1])
-	query.execute(sql)
+	runIsolated(sql)
 
-query.close()
-
-sql = """
-	DROP PROCEDURE IF EXISTS dijResolve;
-	CREATE PROCEDURE dijResolve( pFromNodeName VARCHAR(20), pToNodeName VARCHAR(20) )
-	BEGIN
-	  DECLARE vFromNodeID, vToNodeID, vNodeID, vCost, vPathID INT; 
-	  DECLARE vFromNodeName, vToNodeName VARCHAR(20); 
-	  -- null out path info in the nodes table 
-	  UPDATE dijnodes SET PathID = NULL,Cost = NULL,Calculated = 0; 
-	  -- find nodeIDs referenced by input params 
-	  SET vFromNodeID = ( SELECT NodeID FROM dijnodes WHERE NodeName = pFromNodeName ); 
-	  IF vFromNodeID IS NULL THEN 
-	    SELECT CONCAT('From node name ', pFromNodeName, ' not found.' );  
-	  ELSE 
-	    BEGIN 
-	      -- start at src node 
-	      SET vNodeID = vFromNodeID; 
-	      SET vToNodeID = ( SELECT NodeID FROM dijnodes WHERE NodeName = pToNodeName ); 
-	      IF vToNodeID IS NULL THEN 
-	        SELECT CONCAT('From node name ', pToNodeName, ' not found.' ); 
-	      ELSE 
-	        BEGIN 
-	          -- calculate path costs till all are done 
-	          UPDATE dijnodes SET Cost=0 WHERE NodeID = vFromNodeID; 
-	          WHILE vNodeID IS NOT NULL DO 
-	            BEGIN 
-	              UPDATE  
-	                dijnodes AS src 
-	                JOIN dijpaths AS paths ON paths.FromNodeID = src.NodeID 
-	                JOIN dijnodes AS dest ON dest.NodeID = Paths.ToNodeID 
-	              SET dest.Cost = CASE 
-	                                WHEN dest.Cost IS NULL THEN src.Cost + Paths.Cost 
-	                                WHEN src.Cost + Paths.Cost < dest.Cost THEN src.Cost + Paths.Cost 
-	                                ELSE dest.Cost 
-	                              END, 
-	                  dest.PathID = Paths.PathID 
-	              WHERE  
-	                src.NodeID = vNodeID 
-	                AND (dest.Cost IS NULL OR src.Cost + Paths.Cost < dest.Cost) 
-	                AND dest.Calculated = 0; 
-	        
-	              UPDATE dijnodes SET Calculated = 1 WHERE NodeID = vNodeID; 
-
-	              SET vNodeID = ( SELECT nodeID FROM dijnodes 
-	                              WHERE Calculated = 0 AND Cost IS NOT NULL 
-	                              ORDER BY Cost LIMIT 1 
-	                            ); 
-	            END; 
-	          END WHILE; 
-	        END; 
-	      END IF; 
-	    END; 
-	  END IF; 
-	  IF EXISTS( SELECT 1 FROM dijnodes WHERE NodeID = vToNodeID AND Cost IS NULL ) THEN 
-	    -- problem,  cannot proceed 
-	    SELECT CONCAT( 'Node ',vNodeID, ' missed.' ); 
-	  ELSE 
-	    BEGIN 
-	      -- write itinerary to map table 
-	      DROP TEMPORARY TABLE IF EXISTS map; 
-	      CREATE TEMPORARY TABLE map ( 
-	        RowID INT PRIMARY KEY AUTO_INCREMENT, 
-	        FromNodeName VARCHAR(20), 
-	        ToNodeName VARCHAR(20), 
-	        Cost INT 
-	      ) ENGINE=MEMORY; 
-	      WHILE vFromNodeID <> vToNodeID DO 
-	        BEGIN 
-	          SELECT  
-	            src.NodeName,dest.NodeName,dest.Cost,dest.PathID 
-	            INTO vFromNodeName, vToNodeName, vCost, vPathID 
-	          FROM  
-	            dijnodes AS dest 
-	            JOIN dijpaths AS Paths ON Paths.PathID = dest.PathID 
-	            JOIN dijnodes AS src ON src.NodeID = Paths.FromNodeID 
-	          WHERE dest.NodeID = vToNodeID; 
-	           
-	          INSERT INTO Map(FromNodeName,ToNodeName,Cost) VALUES(vFromNodeName,vToNodeName,vCost); 
-	           
-	          SET vToNodeID = (SELECT FromNodeID FROM dijPaths WHERE PathID = vPathID); 
-	        END; 
-	      END WHILE; 
-	      SELECT FromNodeName,ToNodeName,Cost FROM Map ORDER BY RowID DESC; 
-	      DROP TEMPORARY TABLE Map; 
-	    END; 
-	  END IF; 
-	END; 
-	"""
-query = conn.cursor()
-query.execute(sql)
-query.close()
+createDijkstraProcedure()
 
 sql = "CALL dijResolve('%s','%s');" % (departure, arrival)
-query = conn.cursor()
-query.execute(sql)
+results = runIsolated(sql)
 
 table = PrettyTable(["departure", "arrival", "route_part"])
-for row in query.fetchall():
+for row in results:
 	table.add_row(row)
 
-query.close()
-
-sql = """
-	DROP TABLE IF EXISTS dijnodes,dijpaths; 
-	DROP PROCEDURE IF EXISTS dijAddPath; 
-	DROP PROCEDURE IF EXISTS dijResolve;
-	"""
-query = conn.cursor()
-query.execute(sql)
-query.close()
-query = conn.cursor()
+dropDijkstra()
 
 b = datetime.datetime.now()
 print table
 print "Time: " + str(b-a) + "\n"
+
+
+# Query 3.b
+print "=========================================================================="
+print "Query #3.b: Consider only high frequence routes (greater than the average)"
+print "--------------------------------------------------------------------------"
+
+year = "2011"
+month = "6"
+day = "20"
+departure = "RAP"
+arrival = "XNA"
+
+print "Route: %s -> %s" % (departure, arrival)
+print "Departure: %s/%s/%s" % (day, month, year)
+
+a = datetime.datetime.now()
+
+initDBforDijkstra()
+
+sql = """
+	SELECT r.origin, r.destination
+	FROM flights.routes r
+	WHERE r.year = "%s" AND r.month = "%s" AND r.day = "%s"
+	AND r.frequency > (
+		SELECT avg(r.frequency)
+		FROM flights.routes r
+		WHERE r.year = "%s" AND r.month = "%s" AND r.day = "%s"
+	);;
+	""" % (year, month, day, year, month, day)
+
+results = runIsolated(sql)
+for route in results:
+	sql = "call dijaddpath('%s', '%s',  1);" % (route[0], route[1])
+	runIsolated(sql)
+
+createDijkstraProcedure()
+
+sql = "CALL dijResolve('%s','%s');" % (departure, arrival)
+results = runIsolated(sql)
+
+table = PrettyTable(["departure", "arrival", "route_part"])
+for row in results:
+	table.add_row(row)
+
+dropDijkstra()
+
+b = datetime.datetime.now()
+print table
+print "Time: " + str(b-a) + "\n"
+
 
 # Query 4
 print "==============================================================="
@@ -506,4 +568,5 @@ for row in results:
 	table.add_row(row)
 print table
 print "Time: " + str(time) + "\n"
+
 
