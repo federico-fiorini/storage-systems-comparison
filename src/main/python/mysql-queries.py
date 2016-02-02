@@ -153,7 +153,7 @@ for row in results:
 	table.add_row(row)
 print table
 print "Time: " + str(time) + "\n"
-
+query.close()
 
 # Query 3
 print "========================================================================================"
@@ -358,7 +358,6 @@ query = conn.cursor()
 b = datetime.datetime.now()
 print table
 print "Time: " + str(b-a) + "\n"
-
 
 # Query 4
 print "==============================================================="
