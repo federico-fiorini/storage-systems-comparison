@@ -4,7 +4,7 @@
 2. Find the airport with more flights (in and out) per month
  2.b. Find the airport with more flights (in and out) per year
 
-3. Find the fastest way (with less changes) from airport A to airport B
+3. Given a departure date find the shortest path from airport A to airport B
  3.b. Consider only high frequence routes (top 75%)
 
 4. Find the state with more internal flights (per month)
@@ -12,6 +12,6 @@
 
 5. Find the state with more external departure flights (per month)
  5.b. Find the state with more external departure flights (per year)
- 
+
 6. Find the state with more external arrival flights (per month)
  6.b. Find the state with more external arrival flights (per year)
