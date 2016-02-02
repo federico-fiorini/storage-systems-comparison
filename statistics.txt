@@ -7,6 +7,9 @@ MySQL: ./process_mysql.sh
  - Total routes count: 35.042.751
  - Total airports count: 392
 
+ - spark-submit with max core
+ - Time: 1h 52m 57s
+
 MongoDB: /process_mmongo.sh 
  - spark-submit with default parameters
  - Time: 41m 50s
